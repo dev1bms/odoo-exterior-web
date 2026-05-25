@@ -13,6 +13,8 @@ This repository is the **MVP**. It is deliberately small:
 - SQLite by default (Postgres-ready settings via env vars)
 - Synchronous audit execution (structured for later move to Celery)
 - Bootstrap 5 via CDN, no front-end build step
+- Static assets served by **WhiteNoise** (works the same with `DEBUG=True`
+  or `DEBUG=False`, no `collectstatic` required in development)
 
 ---
 

@@ -32,12 +32,25 @@ class DashboardView(OwnerQuerysetMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         # Avoid a hard import cycle: import here.
         from audits.models import AuditRun
+
+        user = self.request.user
+        user_audits = AuditRun.objects.filter(instance__user=user)
+
         ctx["recent_audits"] = (
-            AuditRun.objects
-            .filter(instance__user=self.request.user)
+            user_audits
             .select_related("instance")
             .order_by("-created_at")[:10]
         )
+        ctx["stats"] = {
+            "instance_count": ctx["instances"].count(),
+            "completed_count": user_audits.filter(
+                status=AuditRun.Status.COMPLETED
+            ).count(),
+            "failed_count": user_audits.filter(
+                status=AuditRun.Status.FAILED
+            ).count(),
+            "latest_audit": user_audits.order_by("-created_at").first(),
+        }
         return ctx
 
 
@@ -48,10 +61,11 @@ class InstanceDetailView(OwnerQuerysetMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         from audits.models import AuditRun
-        ctx["audits"] = (
-            AuditRun.objects
-            .filter(instance=self.object)
-            .order_by("-created_at")
+        audits = AuditRun.objects.filter(instance=self.object).order_by("-created_at")
+        ctx["audits"] = audits
+        ctx["latest_audit"] = audits.first()
+        ctx["latest_completed_audit"] = (
+            audits.filter(status=AuditRun.Status.COMPLETED).first()
         )
         return ctx
 

@@ -1,87 +1,178 @@
 {% extends "base.html" %}
-{% block title %}Audit #{{ audit.id }} · odoo-exterior-web{% endblock %}
+{% block title %}Audit #{{ audit.id }} · {{ audit.instance.name }} · Odoo Exterior{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
-    <li class="breadcrumb-item">
-      <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
-    </li>
-    <li class="breadcrumb-item active">Audit #{{ audit.id }}</li>
-  </ol>
-</nav>
+<section class="container py-4 py-lg-5">
 
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h1 class="h4 mb-1">Audit #{{ audit.id }}</h1>
-        <p class="text-muted mb-0">
-          Instance: <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
-          · started {{ audit.started_at|date:"Y-m-d H:i:s"|default:"—" }}
-          · finished {{ audit.finished_at|date:"Y-m-d H:i:s"|default:"—" }}
-          {% if audit.duration_seconds is not None %}
-            · {{ audit.duration_seconds|floatformat:1 }}s
-          {% endif %}
-        </p>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
+      </li>
+      <li class="breadcrumb-item active">Audit #{{ audit.id }}</li>
+    </ol>
+  </nav>
+
+  {# ---------- Header card ---------- #}
+  <div class="app-card p-4 p-md-4 mb-4 fade-up">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <span class="feature-icon mb-0" style="margin-bottom:0;">
+          <i class="bi bi-clipboard-data"></i>
+        </span>
+        <div>
+          <h1 class="h4 fw-bold mb-1">
+            Audit #{{ audit.id }}
+            <span class="status-badge status-badge--{{ audit.status }} align-middle ms-2">
+              {{ audit.get_status_display }}
+            </span>
+          </h1>
+          <p class="text-muted small mb-0">
+            Instance:
+            <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
+            · Started {{ audit.started_at|date:"M j, Y H:i:s"|default:"—" }}
+            · Finished {{ audit.finished_at|date:"M j, Y H:i:s"|default:"—" }}
+            {% if audit.duration_seconds is not None %}
+              · {{ audit.duration_seconds|floatformat:1 }}s
+            {% endif %}
+          </p>
+        </div>
       </div>
-      <span class="badge badge-status-{{ audit.status }} fs-6">{{ audit.get_status_display }}</span>
+
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary"
+           href="{% url 'audits:download_markdown' audit.id %}">
+          <i class="bi bi-filetype-md me-1"></i>Markdown
+        </a>
+        <a class="btn btn-outline-primary"
+           href="{% url 'audits:download_json' audit.id %}">
+          <i class="bi bi-filetype-json me-1"></i>JSON
+        </a>
+      </div>
     </div>
 
     {% if audit.error_message %}
-      <div class="alert alert-danger mt-3 mb-0">
-        <strong>Error:</strong> {{ audit.error_message }}
+      <div class="callout callout--danger mt-3">
+        <i class="bi bi-x-octagon"></i>
+        <div>
+          <strong>Audit failed.</strong>
+          <div class="small mt-1">{{ audit.error_message }}</div>
+        </div>
       </div>
     {% endif %}
   </div>
-</div>
 
-{% if audit.summary %}
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <h2 class="h5">Summary</h2>
-    <div class="row text-center">
+  {# ---------- Section nav ---------- #}
+  <ul class="nav nav-pills mb-4 small">
+    <li class="nav-item"><a class="nav-link active" href="#overview"><i class="bi bi-grid me-1"></i>Overview</a></li>
+    {% if audit.warnings %}
+      <li class="nav-item">
+        <a class="nav-link" href="#warnings">
+          <i class="bi bi-exclamation-triangle me-1"></i>Warnings
+          <span class="badge bg-warning text-dark ms-1">{{ audit.warnings|length }}</span>
+        </a>
+      </li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link" href="#downloads"><i class="bi bi-download me-1"></i>Downloads</a></li>
+    {% if audit.markdown_report %}
+      <li class="nav-item"><a class="nav-link" href="#preview"><i class="bi bi-file-text me-1"></i>Report preview</a></li>
+    {% endif %}
+  </ul>
+
+  {# ---------- Overview / metrics ---------- #}
+  <h2 class="h5 mb-3" id="overview">
+    <i class="bi bi-graph-up-arrow me-2 text-muted"></i>Summary
+  </h2>
+
+  {% if audit.summary %}
+    <div class="row g-3 mb-4">
       {% for label, value in audit.summary.items %}
-        <div class="col-6 col-md-3 col-lg-2 my-2">
-          <div class="border rounded py-2">
-            <div class="h4 mb-0">{{ value }}</div>
-            <small class="text-muted text-uppercase">{{ label }}</small>
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="metric-card hover-lift fade-up">
+            <span class="metric-icon"><i class="bi bi-bar-chart"></i></span>
+            <div class="metric-value">{{ value }}</div>
+            <div class="metric-label">{{ label }}</div>
           </div>
         </div>
       {% endfor %}
     </div>
-  </div>
-</div>
-{% endif %}
+  {% else %}
+    <p class="text-muted">No summary metrics for this run.</p>
+  {% endif %}
 
-{% if audit.warnings %}
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <h2 class="h5">Warnings ({{ audit.warnings|length }})</h2>
-    <ul class="mb-0 small">
-      {% for w in audit.warnings %}<li>{{ w }}</li>{% endfor %}
-    </ul>
-  </div>
-</div>
-{% endif %}
+  {# ---------- Warnings ---------- #}
+  {% if audit.warnings %}
+    <h2 class="h5 mb-3 mt-5" id="warnings">
+      <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+      Warnings
+      <span class="badge bg-warning text-dark ms-1">{{ audit.warnings|length }}</span>
+    </h2>
+    <div class="app-card p-3 p-md-4 fade-up">
+      <ul class="mb-0 small">
+        {% for w in audit.warnings %}
+          <li class="mb-2">{{ w }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
 
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="h5 mb-0">Reports</h2>
-      <div>
-        <a class="btn btn-outline-primary btn-sm"
-           href="{% url 'audits:download_markdown' audit.id %}">Download Markdown</a>
-        <a class="btn btn-outline-primary btn-sm"
-           href="{% url 'audits:download_json' audit.id %}">Download JSON</a>
+  {# ---------- Downloads ---------- #}
+  <h2 class="h5 mb-3 mt-5" id="downloads">
+    <i class="bi bi-download me-2 text-muted"></i>Downloads
+  </h2>
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="app-card p-4 h-100 fade-up">
+        <div class="d-flex align-items-start gap-3">
+          <span class="feature-icon mb-0" style="margin-bottom:0;">
+            <i class="bi bi-filetype-md"></i>
+          </span>
+          <div class="flex-grow-1">
+            <h6 class="mb-1">Markdown report</h6>
+            <p class="text-muted small mb-3">
+              Human-readable audit report with grouped tables, inferred logic,
+              migration mapping, and risk notes.
+            </p>
+            <a class="btn btn-outline-primary btn-sm"
+               href="{% url 'audits:download_markdown' audit.id %}">
+              <i class="bi bi-download me-1"></i>Download .md
+            </a>
+          </div>
+        </div>
       </div>
     </div>
-    {% if audit.markdown_report %}
-      <pre class="report">{{ audit.markdown_report }}</pre>
-    {% else %}
-      <p class="text-muted mb-0">No Markdown report is available for this run.</p>
-    {% endif %}
+    <div class="col-md-6">
+      <div class="app-card p-4 h-100 fade-up fade-up-1">
+        <div class="d-flex align-items-start gap-3">
+          <span class="feature-icon mb-0" style="margin-bottom:0;">
+            <i class="bi bi-filetype-json"></i>
+          </span>
+          <div class="flex-grow-1">
+            <h6 class="mb-1">JSON dataset</h6>
+            <p class="text-muted small mb-3">
+              Full structured dataset of every extracted record. Use it for
+              tooling, diffs, or version control.
+            </p>
+            <a class="btn btn-outline-primary btn-sm"
+               href="{% url 'audits:download_json' audit.id %}">
+              <i class="bi bi-download me-1"></i>Download .json
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+
+  {# ---------- Inline preview ---------- #}
+  {% if audit.markdown_report %}
+    <h2 class="h5 mb-3 mt-5" id="preview">
+      <i class="bi bi-file-text me-2 text-muted"></i>Report preview
+    </h2>
+    <div class="app-card p-3 fade-up">
+      <pre class="report mb-0">{{ audit.markdown_report }}</pre>
+    </div>
+  {% endif %}
+
+</section>
 {% endblock %}

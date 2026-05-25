@@ -1,86 +1,197 @@
 {% extends "base.html" %}
-{% block title %}Dashboard · odoo-exterior-web{% endblock %}
+{% block title %}Dashboard · Odoo Exterior{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Your Odoo instances</h1>
-  <a class="btn btn-primary" href="{% url 'instances:create' %}">+ Add instance</a>
-</div>
+<section class="container py-4 py-lg-5">
 
-{% if instances %}
-  <div class="card shadow-sm mb-4">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Name</th>
-            <th>URL</th>
-            <th>Database</th>
-            <th>User</th>
-            <th>Status</th>
-            <th>Updated</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for instance in instances %}
-            <tr>
-              <td><a href="{{ instance.get_absolute_url }}">{{ instance.name }}</a></td>
-              <td><code>{{ instance.odoo_url }}</code></td>
-              <td><code>{{ instance.database }}</code></td>
-              <td>{{ instance.username }}</td>
-              <td>
-                <span class="badge badge-status-{{ instance.last_connection_status }}">
-                  {{ instance.get_last_connection_status_display }}
-                </span>
-              </td>
-              <td><small class="text-muted">{{ instance.updated_at|date:"Y-m-d H:i" }}</small></td>
-              <td class="text-end">
-                <a class="btn btn-sm btn-outline-secondary" href="{{ instance.get_absolute_url }}">Open</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  {# ---------- Welcome header ---------- #}
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4 fade-up">
+    <div>
+      <span class="section-kicker">Workspace</span>
+      <h1 class="h3 fw-bold mt-2 mb-1">
+        Welcome back, {{ user.username }}
+      </h1>
+      <p class="text-muted mb-0">
+        Manage your Odoo instances and review your latest Studio audits.
+      </p>
+    </div>
+    <div>
+      <a class="btn btn-primary" href="{% url 'instances:create' %}">
+        <i class="bi bi-plus-lg me-1"></i>Add Odoo instance
+      </a>
     </div>
   </div>
-{% else %}
-  <div class="alert alert-info">
-    No Odoo instances yet. <a href="{% url 'instances:create' %}">Add your first one</a>.
-  </div>
-{% endif %}
 
-<h2 class="h5 mt-4">Recent audits</h2>
-{% if recent_audits %}
-  <div class="card shadow-sm">
-    <div class="table-responsive">
-      <table class="table mb-0 align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Instance</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for audit in recent_audits %}
-            <tr>
-              <td>{{ audit.id }}</td>
-              <td><a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a></td>
-              <td><span class="badge badge-status-{{ audit.status }}">{{ audit.get_status_display }}</span></td>
-              <td><small class="text-muted">{{ audit.created_at|date:"Y-m-d H:i" }}</small></td>
-              <td class="text-end">
-                <a class="btn btn-sm btn-outline-secondary" href="{{ audit.get_absolute_url }}">View</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  {# ---------- Metric cards ---------- #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="metric-card hover-lift fade-up">
+        <span class="metric-icon"><i class="bi bi-hdd-network"></i></span>
+        <div class="metric-value">{{ stats.instance_count }}</div>
+        <div class="metric-label">Instances</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="metric-card hover-lift fade-up fade-up-1">
+        <span class="metric-icon" style="background:#dcfce7;color:#15803d;">
+          <i class="bi bi-check2-circle"></i>
+        </span>
+        <div class="metric-value">{{ stats.completed_count }}</div>
+        <div class="metric-label">Completed audits</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="metric-card hover-lift fade-up fade-up-2">
+        <span class="metric-icon" style="background:#fee2e2;color:#b91c1c;">
+          <i class="bi bi-exclamation-triangle"></i>
+        </span>
+        <div class="metric-value">{{ stats.failed_count }}</div>
+        <div class="metric-label">Failed audits</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="metric-card hover-lift fade-up fade-up-3">
+        <span class="metric-icon"><i class="bi bi-clock-history"></i></span>
+        {% if stats.latest_audit %}
+          <div class="metric-value" style="font-size:1.05rem;">
+            #{{ stats.latest_audit.id }}
+            <span class="status-badge status-badge--{{ stats.latest_audit.status }} align-middle ms-1">
+              {{ stats.latest_audit.get_status_display }}
+            </span>
+          </div>
+          <div class="metric-label">
+            {{ stats.latest_audit.created_at|date:"M j, H:i" }} ·
+            <a href="{{ stats.latest_audit.get_absolute_url }}">View</a>
+          </div>
+        {% else %}
+          <div class="metric-value" style="font-size:1.1rem;">—</div>
+          <div class="metric-label">No audits yet</div>
+        {% endif %}
+      </div>
     </div>
   </div>
-{% else %}
-  <p class="text-muted">No audits yet.</p>
-{% endif %}
+
+  {# ---------- Instances list ---------- #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h5 mb-0"><i class="bi bi-hdd-network me-2 text-muted"></i>Your Odoo instances</h2>
+    {% if instances %}
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'instances:create' %}">
+        <i class="bi bi-plus-lg me-1"></i>Add instance
+      </a>
+    {% endif %}
+  </div>
+
+  {% if instances %}
+    <div class="app-card overflow-hidden mb-4 fade-up">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>URL</th>
+              <th>Database</th>
+              <th>User</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for instance in instances %}
+              <tr>
+                <td>
+                  <a href="{{ instance.get_absolute_url }}" class="fw-medium text-decoration-none">
+                    {{ instance.name }}
+                  </a>
+                  {% if not instance.is_active %}
+                    <span class="badge bg-secondary ms-1">inactive</span>
+                  {% endif %}
+                </td>
+                <td><code class="small">{{ instance.odoo_url }}</code></td>
+                <td><code class="small">{{ instance.database }}</code></td>
+                <td><span class="small">{{ instance.username }}</span></td>
+                <td>
+                  <span class="status-badge status-badge--{{ instance.last_connection_status }}">
+                    {{ instance.get_last_connection_status_display }}
+                  </span>
+                </td>
+                <td><small class="text-muted">{{ instance.updated_at|date:"M j, H:i" }}</small></td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ instance.get_absolute_url }}">
+                    Open <i class="bi bi-arrow-right-short"></i>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state fade-up">
+      <span class="empty-icon"><i class="bi bi-hdd-network"></i></span>
+      <h3 class="h5 mb-1">No Odoo instance yet</h3>
+      <p class="text-muted mb-3">
+        Add your first instance to test the connection and run a Studio audit.
+      </p>
+      <a class="btn btn-primary" href="{% url 'instances:create' %}">
+        <i class="bi bi-plus-lg me-1"></i>Add Odoo instance
+      </a>
+    </div>
+  {% endif %}
+
+  {# ---------- Recent audits ---------- #}
+  <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+    <h2 class="h5 mb-0"><i class="bi bi-clock-history me-2 text-muted"></i>Recent audits</h2>
+  </div>
+
+  {% if recent_audits %}
+    <div class="app-card overflow-hidden fade-up">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Instance</th>
+              <th>Status</th>
+              <th>Models</th>
+              <th>Fields</th>
+              <th>Views</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for audit in recent_audits %}
+              <tr>
+                <td>{{ audit.id }}</td>
+                <td>
+                  <a href="{{ audit.instance.get_absolute_url }}" class="text-decoration-none">
+                    {{ audit.instance.name }}
+                  </a>
+                </td>
+                <td>
+                  <span class="status-badge status-badge--{{ audit.status }}">
+                    {{ audit.get_status_display }}
+                  </span>
+                </td>
+                <td>{{ audit.summary.models|default:"—" }}</td>
+                <td>{{ audit.summary.fields|default:"—" }}</td>
+                <td>{{ audit.summary.views|default:"—" }}</td>
+                <td><small class="text-muted">{{ audit.created_at|date:"M j, H:i" }}</small></td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ audit.get_absolute_url }}">
+                    View <i class="bi bi-arrow-right-short"></i>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <p class="text-muted mb-0">No audits yet.</p>
+  {% endif %}
+</section>
 {% endblock %}

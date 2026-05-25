@@ -47,6 +47,27 @@ class OdooInstanceForm(forms.ModelForm):
         if self._is_create:
             self.fields["password"].required = True
 
+        # Per-field helper copy for the form template.
+        self.fields["name"].help_text = (
+            "A short label you will recognize in the dashboard, e.g. "
+            "<code>Production</code> or <code>Staging</code>."
+        )
+        self.fields["odoo_url"].help_text = (
+            "Base URL of the Odoo instance, including the scheme. "
+            "Example: <code>https://your-odoo-host.example.com</code>"
+        )
+        self.fields["database"].help_text = (
+            "Name of the Odoo database to audit (the same value you use on "
+            "the Odoo login screen)."
+        )
+        self.fields["username"].help_text = (
+            "Login of the Odoo user that will be used for the audit. "
+            "Use a dedicated read-only user when possible."
+        )
+        self.fields["is_active"].help_text = (
+            "Inactive instances are kept in your dashboard but cannot run new audits."
+        )
+
     def clean_odoo_url(self) -> str:
         url = (self.cleaned_data.get("odoo_url") or "").strip().rstrip("/")
         if not url.startswith(("http://", "https://")):

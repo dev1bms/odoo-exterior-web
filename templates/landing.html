@@ -1,54 +1,487 @@
 {% extends "base.html" %}
 
-{% block title %}odoo-exterior-web — Studio audits as a service{% endblock %}
+{% block title %}Odoo Exterior — Understand your Odoo Studio customizations in minutes{% endblock %}
 
 {% block content %}
-<div class="px-4 py-5 my-3 text-center">
-  <h1 class="display-5 fw-bold">Audit Odoo Studio customizations from your browser</h1>
-  <div class="col-lg-7 mx-auto">
-    <p class="lead mt-3">
-      Connect any Odoo instance in <strong>read-only mode</strong>, scan its
-      Studio customizations, and download a structured Markdown + JSON
-      report. No installation inside Odoo, no write access required.
+
+{# ====================================================================
+   HERO
+==================================================================== #}
+<section class="container pt-4 pt-lg-5">
+  <div class="hero-gradient p-4 p-md-5 p-lg-5">
+    <span class="hero-blob b1"></span>
+    <span class="hero-blob b2"></span>
+    <span class="hero-blob b3"></span>
+
+    <div class="row align-items-center g-5 py-3 py-lg-4">
+      <div class="col-lg-7">
+        <span class="hero-eyebrow fade-up">
+          <i class="bi bi-stars"></i>
+          Odoo Studio Extractor · v0.1
+        </span>
+        <h1 class="hero-title mt-3 mb-3 fade-up fade-up-1 text-balance">
+          Understand your Odoo Studio
+          <span class="accent">customizations</span> in minutes.
+        </h1>
+        <p class="hero-subtitle fade-up fade-up-2">
+          Odoo Exterior connects to your Odoo instance, runs a
+          <strong class="text-white">read-only technical audit</strong>,
+          and turns hidden Studio customizations into clear Markdown and
+          JSON reports.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 fade-up fade-up-3">
+          {% if user.is_authenticated %}
+            <a class="btn btn-cta btn-lg" href="{% url 'instances:dashboard' %}">
+              <i class="bi bi-speedometer2 me-2"></i>Go to dashboard
+            </a>
+          {% else %}
+            <a class="btn btn-cta btn-lg" href="{% url 'accounts:register' %}">
+              <i class="bi bi-rocket-takeoff me-2"></i>Start free audit
+            </a>
+          {% endif %}
+          <a class="btn btn-ghost-light btn-lg" href="#how-it-works">
+            View how it works
+            <i class="bi bi-arrow-down-short ms-1"></i>
+          </a>
+        </div>
+
+        <div class="d-flex flex-wrap gap-3 align-items-center mt-4 hero-trust fade-up fade-up-4">
+          <span><i class="bi bi-shield-check me-1"></i>Read-only audit</span>
+          <span class="opacity-50">·</span>
+          <span><i class="bi bi-box me-1"></i>No Odoo module to install</span>
+          <span class="opacity-50">·</span>
+          <span><i class="bi bi-key me-1"></i>Encrypted credentials at rest</span>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="row g-3 fade-up fade-up-2">
+          <div class="col-6">
+            <div class="hero-metric">
+              <div class="label">Custom models</div>
+              <div class="value">x_*</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="hero-metric">
+              <div class="label">Studio fields</div>
+              <div class="value">x_studio_*</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="hero-metric">
+              <div class="label">Views, menus &amp; actions</div>
+              <div class="value">XML</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="hero-metric">
+              <div class="label">Output</div>
+              <div class="value">.md + .json</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ====================================================================
+   PROBLEM
+==================================================================== #}
+<section class="section">
+  <div class="container">
+    <div class="row justify-content-center text-center mb-5">
+      <div class="col-lg-8">
+        <span class="section-kicker">The problem</span>
+        <h2 class="section-title mt-3 mb-3 text-balance">
+          Studio is fast. Tracking what it changed isn't.
+        </h2>
+        <p class="section-lead mx-auto">
+          Odoo Studio lets anyone customize a database in clicks — fields,
+          views, automations, menus, security. After a few months, that
+          knowledge becomes scattered across screens and admins.
+        </p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="feature-card hover-lift fade-up">
+          <div class="feature-icon"><i class="bi bi-diagram-3"></i></div>
+          <h5>Customizations get scattered</h5>
+          <p class="text-muted mb-0">
+            Fields, views, server actions and rules end up across dozens of
+            technical menus, with little overview.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card hover-lift fade-up fade-up-1">
+          <div class="feature-icon"><i class="bi bi-question-circle"></i></div>
+          <h5>Hard to hand over</h5>
+          <p class="text-muted mb-0">
+            New consultants or developers struggle to map what was changed
+            and why before touching anything.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card hover-lift fade-up fade-up-2">
+          <div class="feature-icon"><i class="bi bi-arrow-repeat"></i></div>
+          <h5>Risky to migrate</h5>
+          <p class="text-muted mb-0">
+            Rebuilding Studio work as a custom module without a clean
+            inventory is where regressions sneak in.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ====================================================================
+   SOLUTION
+==================================================================== #}
+<section class="section bg-soft">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <span class="section-kicker">The solution</span>
+        <h2 class="section-title mt-3 mb-3 text-balance">
+          One read-only scan, one structured report.
+        </h2>
+        <p class="section-lead">
+          Odoo Exterior queries your Odoo instance over standard XML-RPC,
+          using a strict allowlist of read-only methods, and produces a
+          single artifact you can review, version, and hand to a developer.
+        </p>
+        <a href="#how-it-works" class="btn btn-outline-primary mt-2">
+          See the workflow <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="feature-card hover-lift">
+              <div class="feature-icon"><i class="bi bi-input-cursor-text"></i></div>
+              <h6 class="mb-1">Studio field extraction</h6>
+              <p class="text-muted small mb-0">
+                <code>x_studio_*</code>, manual fields, types, relations and constraints.
+              </p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feature-card hover-lift">
+              <div class="feature-icon"><i class="bi bi-database"></i></div>
+              <h6 class="mb-1">Custom model discovery</h6>
+              <p class="text-muted small mb-0">
+                Detects <code>x_*</code> models and any standard model with Studio fields.
+              </p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feature-card hover-lift">
+              <div class="feature-icon"><i class="bi bi-window-stack"></i></div>
+              <h6 class="mb-1">View reverse engineering</h6>
+              <p class="text-muted small mb-0">
+                Modified or Studio-generated views with their <code>arch_db</code>.
+              </p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feature-card hover-lift">
+              <div class="feature-icon"><i class="bi bi-lightning-charge"></i></div>
+              <h6 class="mb-1">Actions &amp; automations</h6>
+              <p class="text-muted small mb-0">
+                Server actions, automated rules, and their target models.
+              </p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feature-card hover-lift">
+              <div class="feature-icon"><i class="bi bi-shield-lock"></i></div>
+              <h6 class="mb-1">Security mapping</h6>
+              <p class="text-muted small mb-0">
+                Access rights and record rules tied to custom models.
+              </p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feature-card hover-lift">
+              <div class="feature-icon"><i class="bi bi-signpost-2"></i></div>
+              <h6 class="mb-1">Migration planning</h6>
+              <p class="text-muted small mb-0">
+                A Markdown report you can hand to a developer to rebuild as code.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ====================================================================
+   HOW IT WORKS
+==================================================================== #}
+<section class="section" id="how-it-works">
+  <div class="container">
+    <div class="row justify-content-center text-center mb-5">
+      <div class="col-lg-8">
+        <span class="section-kicker">How it works</span>
+        <h2 class="section-title mt-3 mb-3 text-balance">
+          From credentials to a structured report in four steps.
+        </h2>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-3">
+        <div class="step-card hover-lift fade-up">
+          <div class="step-number">1</div>
+          <h6 class="mb-1">Connect your Odoo</h6>
+          <p class="text-muted small mb-0">
+            Add an instance with URL, database, username, and a password or
+            API key. Stored encrypted.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="step-card hover-lift fade-up fade-up-1">
+          <div class="step-number">2</div>
+          <h6 class="mb-1">Test read-only access</h6>
+          <p class="text-muted small mb-0">
+            Verify authentication before doing anything. Only read methods
+            are ever called.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="step-card hover-lift fade-up fade-up-2">
+          <div class="step-number">3</div>
+          <h6 class="mb-1">Run the Studio audit</h6>
+          <p class="text-muted small mb-0">
+            Models, fields, views, actions, menus and security are scanned
+            in a single pass.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <div class="step-card hover-lift fade-up fade-up-3">
+          <div class="step-number">4</div>
+          <h6 class="mb-1">Download the reports</h6>
+          <p class="text-muted small mb-0">
+            Get <code>studio_report.md</code> for humans and
+            <code>studio_data.json</code> for tooling.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ====================================================================
+   FEATURES
+==================================================================== #}
+<section class="section bg-soft" id="features">
+  <div class="container">
+    <div class="row justify-content-center text-center mb-5">
+      <div class="col-lg-8">
+        <span class="section-kicker">Features</span>
+        <h2 class="section-title mt-3 mb-3 text-balance">
+          Everything you need to map a Studio database.
+        </h2>
+        <p class="section-lead mx-auto">
+          A focused toolset, not a Swiss-army knife. Each module is
+          read-only, opinionated, and produces auditable output.
+        </p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card hover-lift fade-up">
+          <div class="feature-icon"><i class="bi bi-input-cursor-text"></i></div>
+          <h5>Studio field extraction</h5>
+          <p class="text-muted mb-0">
+            Detects <code>x_studio_*</code> and manual fields, exports type,
+            relation, required, readonly, stored, computed code, and
+            dependencies.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card hover-lift fade-up fade-up-1">
+          <div class="feature-icon"><i class="bi bi-database-gear"></i></div>
+          <h5>Custom model discovery</h5>
+          <p class="text-muted mb-0">
+            Lists Studio-generated models and any standard model that has
+            been extended with Studio fields.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card hover-lift fade-up fade-up-2">
+          <div class="feature-icon"><i class="bi bi-window-stack"></i></div>
+          <h5>View reverse engineering</h5>
+          <p class="text-muted mb-0">
+            Captures modified and Studio-generated views with their
+            inheritance chain and full <code>arch_db</code>.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card hover-lift fade-up">
+          <div class="feature-icon"><i class="bi bi-lightning-charge"></i></div>
+          <h5>Server action review</h5>
+          <p class="text-muted mb-0">
+            Server actions and <code>base.automation</code> rules with their
+            triggers, target models, and Python code where available.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card hover-lift fade-up fade-up-1">
+          <div class="feature-icon"><i class="bi bi-shield-lock"></i></div>
+          <h5>Security mapping</h5>
+          <p class="text-muted mb-0">
+            Access rights (<code>ir.model.access</code>) and record rules
+            (<code>ir.rule</code>) tied to custom models.
+          </p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="feature-card hover-lift fade-up fade-up-2">
+          <div class="feature-icon"><i class="bi bi-signpost-2"></i></div>
+          <h5>Migration planning</h5>
+          <p class="text-muted mb-0">
+            A Markdown report with executive summary, grouped tables, and a
+            mapping to the equivalent Odoo module layout.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ====================================================================
+   OUTPUT PREVIEW
+==================================================================== #}
+<section class="section" id="preview">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <span class="section-kicker">Sample output</span>
+        <h2 class="section-title mt-3 mb-3 text-balance">
+          Numbers you can act on.
+        </h2>
+        <p class="section-lead">
+          Every audit produces a structured summary, a full Markdown report,
+          and a machine-readable JSON dataset. Below is what the summary of
+          a real-sized Studio database looks like.
+        </p>
+        <ul class="list-unstyled small text-muted mt-3">
+          <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>One JSON file for tooling and diffs</li>
+          <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>One Markdown file for humans</li>
+          <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Mapping to a hand-written module layout</li>
+        </ul>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="preview-card">
+          <div class="preview-header">
+            <span class="preview-dots"><span></span><span></span><span></span></span>
+            studio_report.md · audit summary
+          </div>
+          <div class="preview-body">
+            <div class="row g-3">
+              <div class="col-6 col-md-4">
+                <div class="metric-card">
+                  <span class="metric-icon"><i class="bi bi-database"></i></span>
+                  <div class="metric-value">99</div>
+                  <div class="metric-label">Custom models</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4">
+                <div class="metric-card">
+                  <span class="metric-icon"><i class="bi bi-input-cursor-text"></i></span>
+                  <div class="metric-value">2,640</div>
+                  <div class="metric-label">Studio fields</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4">
+                <div class="metric-card">
+                  <span class="metric-icon"><i class="bi bi-window-stack"></i></span>
+                  <div class="metric-value">1,053</div>
+                  <div class="metric-label">Modified views</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4">
+                <div class="metric-card">
+                  <span class="metric-icon"><i class="bi bi-lightning-charge"></i></span>
+                  <div class="metric-value">416</div>
+                  <div class="metric-label">Server actions</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4">
+                <div class="metric-card">
+                  <span class="metric-icon"><i class="bi bi-shield-lock"></i></span>
+                  <div class="metric-value">302</div>
+                  <div class="metric-label">Access rules</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-4">
+                <div class="metric-card">
+                  <span class="metric-icon"><i class="bi bi-list-check"></i></span>
+                  <div class="metric-value">87</div>
+                  <div class="metric-label">Automations</div>
+                </div>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">
+              <i class="bi bi-info-circle me-1"></i>
+              Sample numbers shown for illustration. Your real audit will reflect your database.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ====================================================================
+   CTA
+==================================================================== #}
+<section class="container py-4">
+  <div class="hero-gradient p-4 p-md-5 text-center">
+    <span class="hero-blob b1"></span>
+    <span class="hero-blob b2"></span>
+    <h2 class="section-title text-white text-balance mb-3">
+      Ready to map your Odoo Studio setup?
+    </h2>
+    <p class="hero-subtitle mx-auto mb-4">
+      Create a free account, add an instance, and run your first audit in
+      under five minutes.
     </p>
-    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
+    <div class="d-flex flex-wrap justify-content-center gap-2">
       {% if user.is_authenticated %}
-        <a class="btn btn-primary btn-lg" href="{% url 'instances:dashboard' %}">Open dashboard</a>
+        <a class="btn btn-cta btn-lg" href="{% url 'instances:dashboard' %}">
+          <i class="bi bi-speedometer2 me-2"></i>Open dashboard
+        </a>
       {% else %}
-        <a class="btn btn-primary btn-lg" href="{% url 'accounts:register' %}">Create an account</a>
-        <a class="btn btn-outline-secondary btn-lg" href="{% url 'accounts:login' %}">Log in</a>
+        <a class="btn btn-cta btn-lg" href="{% url 'accounts:register' %}">
+          Create your free account
+          <i class="bi bi-arrow-right ms-2"></i>
+        </a>
+        <a class="btn btn-ghost-light btn-lg" href="{% url 'accounts:login' %}">
+          I already have an account
+        </a>
       {% endif %}
     </div>
   </div>
-</div>
+</section>
 
-<div class="row g-4 py-3">
-  <div class="col-md-4">
-    <div class="p-3 h-100 bg-white rounded shadow-sm">
-      <h5>1. Add an Odoo instance</h5>
-      <p class="mb-0 text-muted">
-        URL, database, username, password / API key. Credentials are
-        encrypted at rest with Fernet.
-      </p>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="p-3 h-100 bg-white rounded shadow-sm">
-      <h5>2. Test the connection</h5>
-      <p class="mb-0 text-muted">
-        Verify authentication before running anything. Only read methods
-        are ever called.
-      </p>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="p-3 h-100 bg-white rounded shadow-sm">
-      <h5>3. Run a Studio audit</h5>
-      <p class="mb-0 text-muted">
-        Discover custom models, fields, views, automations, menus, and
-        security rules. Download as Markdown or JSON.
-      </p>
-    </div>
-  </div>
-</div>
 {% endblock %}

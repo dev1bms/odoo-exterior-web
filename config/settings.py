@@ -61,6 +61,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise serves static files in dev and prod, regardless of DEBUG.
+    # Must come right after SecurityMiddleware.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -133,6 +136,21 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# WhiteNoise: serve files directly from STATICFILES_DIRS without a prior
+# `collectstatic` run. This makes local development friction-free; in
+# production you should still run `collectstatic` so the manifest storage
+# can hash and compress assets.
+WHITENOISE_USE_FINDERS = True
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 
 # --- Default primary key -------------------------------------------------- #
