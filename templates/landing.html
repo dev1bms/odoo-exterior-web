@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}odoo-exterior-web — Studio audits as a service{% endblock %}
+
+{% block content %}
+<div class="px-4 py-5 my-3 text-center">
+  <h1 class="display-5 fw-bold">Audit Odoo Studio customizations from your browser</h1>
+  <div class="col-lg-7 mx-auto">
+    <p class="lead mt-3">
+      Connect any Odoo instance in <strong>read-only mode</strong>, scan its
+      Studio customizations, and download a structured Markdown + JSON
+      report. No installation inside Odoo, no write access required.
+    </p>
+    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
+      {% if user.is_authenticated %}
+        <a class="btn btn-primary btn-lg" href="{% url 'instances:dashboard' %}">Open dashboard</a>
+      {% else %}
+        <a class="btn btn-primary btn-lg" href="{% url 'accounts:register' %}">Create an account</a>
+        <a class="btn btn-outline-secondary btn-lg" href="{% url 'accounts:login' %}">Log in</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 py-3">
+  <div class="col-md-4">
+    <div class="p-3 h-100 bg-white rounded shadow-sm">
+      <h5>1. Add an Odoo instance</h5>
+      <p class="mb-0 text-muted">
+        URL, database, username, password / API key. Credentials are
+        encrypted at rest with Fernet.
+      </p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="p-3 h-100 bg-white rounded shadow-sm">
+      <h5>2. Test the connection</h5>
+      <p class="mb-0 text-muted">
+        Verify authentication before running anything. Only read methods
+        are ever called.
+      </p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="p-3 h-100 bg-white rounded shadow-sm">
+      <h5>3. Run a Studio audit</h5>
+      <p class="mb-0 text-muted">
+        Discover custom models, fields, views, automations, menus, and
+        security rules. Download as Markdown or JSON.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

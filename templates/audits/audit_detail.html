@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Audit #{{ audit.id }} · odoo-exterior-web{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item">
+      <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
+    </li>
+    <li class="breadcrumb-item active">Audit #{{ audit.id }}</li>
+  </ol>
+</nav>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h1 class="h4 mb-1">Audit #{{ audit.id }}</h1>
+        <p class="text-muted mb-0">
+          Instance: <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
+          · started {{ audit.started_at|date:"Y-m-d H:i:s"|default:"—" }}
+          · finished {{ audit.finished_at|date:"Y-m-d H:i:s"|default:"—" }}
+          {% if audit.duration_seconds is not None %}
+            · {{ audit.duration_seconds|floatformat:1 }}s
+          {% endif %}
+        </p>
+      </div>
+      <span class="badge badge-status-{{ audit.status }} fs-6">{{ audit.get_status_display }}</span>
+    </div>
+
+    {% if audit.error_message %}
+      <div class="alert alert-danger mt-3 mb-0">
+        <strong>Error:</strong> {{ audit.error_message }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if audit.summary %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5">Summary</h2>
+    <div class="row text-center">
+      {% for label, value in audit.summary.items %}
+        <div class="col-6 col-md-3 col-lg-2 my-2">
+          <div class="border rounded py-2">
+            <div class="h4 mb-0">{{ value }}</div>
+            <small class="text-muted text-uppercase">{{ label }}</small>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if audit.warnings %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5">Warnings ({{ audit.warnings|length }})</h2>
+    <ul class="mb-0 small">
+      {% for w in audit.warnings %}<li>{{ w }}</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h5 mb-0">Reports</h2>
+      <div>
+        <a class="btn btn-outline-primary btn-sm"
+           href="{% url 'audits:download_markdown' audit.id %}">Download Markdown</a>
+        <a class="btn btn-outline-primary btn-sm"
+           href="{% url 'audits:download_json' audit.id %}">Download JSON</a>
+      </div>
+    </div>
+    {% if audit.markdown_report %}
+      <pre class="report">{{ audit.markdown_report }}</pre>
+    {% else %}
+      <p class="text-muted mb-0">No Markdown report is available for this run.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

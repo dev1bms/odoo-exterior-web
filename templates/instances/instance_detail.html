@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ instance.name }} · odoo-exterior-web{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item active">{{ instance.name }}</li>
+  </ol>
+</nav>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h1 class="h4 mb-1">{{ instance.name }}</h1>
+        <p class="text-muted mb-0">
+          <code>{{ instance.odoo_url }}</code> · DB <code>{{ instance.database }}</code> · user
+          <code>{{ instance.username }}</code>
+        </p>
+      </div>
+      <div>
+        <span class="badge badge-status-{{ instance.last_connection_status }}">
+          {{ instance.get_last_connection_status_display }}
+        </span>
+      </div>
+    </div>
+
+    {% if instance.last_connection_error %}
+      <div class="alert alert-warning mt-3 mb-0">
+        <strong>Last error:</strong> {{ instance.last_connection_error }}
+      </div>
+    {% endif %}
+
+    <hr>
+
+    <div class="d-flex flex-wrap gap-2">
+      <form method="post" action="{% url 'instances:test' instance.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary" type="submit">Test connection</button>
+      </form>
+      <form method="post" action="{% url 'audits:run' instance.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit">Run audit</button>
+      </form>
+      <a class="btn btn-outline-secondary" href="{% url 'instances:edit' instance.pk %}">Edit</a>
+      <a class="btn btn-outline-danger ms-auto" href="{% url 'instances:delete' instance.pk %}">Delete</a>
+    </div>
+  </div>
+</div>
+
+<h2 class="h5">Audit history</h2>
+{% if audits %}
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Status</th>
+            <th>Started</th>
+            <th>Finished</th>
+            <th>Models</th>
+            <th>Fields</th>
+            <th>Views</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for audit in audits %}
+            <tr>
+              <td>{{ audit.id }}</td>
+              <td><span class="badge badge-status-{{ audit.status }}">{{ audit.get_status_display }}</span></td>
+              <td><small>{{ audit.started_at|date:"Y-m-d H:i:s"|default:"—" }}</small></td>
+              <td><small>{{ audit.finished_at|date:"Y-m-d H:i:s"|default:"—" }}</small></td>
+              <td>{{ audit.summary.models|default:"—" }}</td>
+              <td>{{ audit.summary.fields|default:"—" }}</td>
+              <td>{{ audit.summary.views|default:"—" }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ audit.get_absolute_url }}">View</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted">No audits yet. Click <strong>Run audit</strong> above to start your first one.</p>
+{% endif %}
+{% endblock %}

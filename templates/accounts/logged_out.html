@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Logged out · odoo-exterior-web{% endblock %}
+
+{% block content %}
+<div class="text-center">
+  <h1 class="h4">You are logged out.</h1>
+  <p><a href="{% url 'accounts:login' %}">Log in again</a> or
+     <a href="{% url 'landing' %}">return to the home page</a>.</p>
+</div>
+{% endblock %}

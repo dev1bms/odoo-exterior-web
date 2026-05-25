@@ -1,0 +1,9 @@
+Django>=5.0,<6.0
+cryptography>=41.0
+python-dotenv>=1.0
+
+# The Odoo Studio extraction engine.
+# Install it from the sibling repo BEFORE installing this requirements file:
+#   pip install -e ../odoo-studio-extractor
+# It is intentionally NOT listed here as a path dependency to keep the file
+# environment-independent.

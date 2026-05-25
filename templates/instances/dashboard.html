@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · odoo-exterior-web{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Your Odoo instances</h1>
+  <a class="btn btn-primary" href="{% url 'instances:create' %}">+ Add instance</a>
+</div>
+
+{% if instances %}
+  <div class="card shadow-sm mb-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>URL</th>
+            <th>Database</th>
+            <th>User</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for instance in instances %}
+            <tr>
+              <td><a href="{{ instance.get_absolute_url }}">{{ instance.name }}</a></td>
+              <td><code>{{ instance.odoo_url }}</code></td>
+              <td><code>{{ instance.database }}</code></td>
+              <td>{{ instance.username }}</td>
+              <td>
+                <span class="badge badge-status-{{ instance.last_connection_status }}">
+                  {{ instance.get_last_connection_status_display }}
+                </span>
+              </td>
+              <td><small class="text-muted">{{ instance.updated_at|date:"Y-m-d H:i" }}</small></td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ instance.get_absolute_url }}">Open</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="alert alert-info">
+    No Odoo instances yet. <a href="{% url 'instances:create' %}">Add your first one</a>.
+  </div>
+{% endif %}
+
+<h2 class="h5 mt-4">Recent audits</h2>
+{% if recent_audits %}
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Instance</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for audit in recent_audits %}
+            <tr>
+              <td>{{ audit.id }}</td>
+              <td><a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a></td>
+              <td><span class="badge badge-status-{{ audit.status }}">{{ audit.get_status_display }}</span></td>
+              <td><small class="text-muted">{{ audit.created_at|date:"Y-m-d H:i" }}</small></td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ audit.get_absolute_url }}">View</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted">No audits yet.</p>
+{% endif %}
+{% endblock %}
