@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}{{ instance.name }} · Data Explorer · Odoo Exterior{% endblock %}
+
+{% block extra_head %}
+<style>
+  .model-row td { vertical-align: middle; }
+  .model-row td.model-name code { font-size: 0.9rem; }
+  #model-search-empty { display: none; }
+  .model-row.is-hidden { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+
+  {# ---------- Breadcrumb ---------- #}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'data_explorer:index' %}">Data Explorer</a></li>
+      <li class="breadcrumb-item active">{{ instance.name }}</li>
+    </ol>
+  </nav>
+
+  {# ---------- Header card ---------- #}
+  <div class="app-card p-4 mb-4 fade-up">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <span class="feature-icon mb-0" style="margin-bottom:0;">
+          <i class="bi bi-hdd-network"></i>
+        </span>
+        <div>
+          <h1 class="h4 fw-bold mb-1">{{ instance.name }}</h1>
+          <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
+            <code>{{ instance.odoo_url }}</code>
+            <span>·</span>
+            <span>db <code>{{ instance.database }}</code></span>
+            <span>·</span>
+            <span class="status-badge status-badge--{{ instance.last_connection_status }}">
+              {{ instance.get_last_connection_status_display }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary"
+           href="{% url 'data_explorer:index' %}">
+          <i class="bi bi-arrow-left me-1"></i>All instances
+        </a>
+        <a class="btn btn-outline-secondary"
+           href="{{ instance.get_absolute_url }}">
+          <i class="bi bi-gear me-1"></i>Instance settings
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% if not latest_audit %}
+    {# ---------- No audit yet ---------- #}
+    <div class="callout callout--warning mb-4 fade-up">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <strong>Run a Studio Audit first</strong> to build the model and field
+        catalog used by Data Explorer.
+      </div>
+    </div>
+    <div class="empty-state fade-up">
+      <span class="empty-icon"><i class="bi bi-search"></i></span>
+      <h3 class="h6 mb-2">No completed audit found</h3>
+      <p class="text-muted small mb-3">
+        Once an audit completes, every model captured by it will appear here
+        as a browsable, exportable live data source.
+      </p>
+      <form action="{% url 'audits:run' instance.pk %}" method="post" class="m-0">
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit">
+          <i class="bi bi-play-fill me-1"></i>Run audit now
+        </button>
+      </form>
+    </div>
+
+  {% else %}
+    {# ---------- Catalog source banner ---------- #}
+    <div class="callout callout--info mb-4 fade-up">
+      <i class="bi bi-info-circle"></i>
+      <div>
+        Catalog from audit
+        <a href="{{ latest_audit.get_absolute_url }}">#{{ latest_audit.id }}</a>
+        generated on <strong>{{ latest_audit.created_at|date:"M j, Y H:i" }}</strong>
+        — <strong>{{ model_count }}</strong> model{{ model_count|pluralize }} available.
+        <form action="{% url 'audits:run' instance.pk %}" method="post"
+              class="d-inline ms-2 m-0">
+          {% csrf_token %}
+          <button class="btn btn-link btn-sm p-0 align-baseline" type="submit">
+            <i class="bi bi-arrow-clockwise me-1"></i>Run a fresh audit
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {# ---------- Quick links ---------- #}
+    {% if quick_links %}
+      <div class="mb-3 fade-up">
+        <span class="small text-muted me-2">Quick links:</span>
+        {% for name in quick_links %}
+          <a class="btn btn-sm btn-outline-primary me-1 mb-1"
+             href="{% url 'data_explorer:model' instance.pk name %}">
+            <code>{{ name }}</code>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# ---------- Search box ---------- #}
+    <div class="row g-2 align-items-center mb-3 fade-up">
+      <div class="col-md-6">
+        <div class="input-group">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input type="search" id="model-search" class="form-control"
+                 placeholder="Filter models by technical or display name…"
+                 autocomplete="off">
+        </div>
+      </div>
+      <div class="col-md-6 text-md-end small text-muted">
+        Showing <span id="visible-count">{{ model_count }}</span>
+        of {{ model_count }} model{{ model_count|pluralize }}
+      </div>
+    </div>
+
+    {# ---------- Model table ---------- #}
+    {% if models %}
+      <div class="app-card overflow-hidden fade-up">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Technical name</th>
+                <th>Display name</th>
+                <th>State</th>
+                <th class="text-end">Fields</th>
+                <th class="text-end">Relations</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="model-table-body">
+              {% for m in models %}
+                <tr class="model-row"
+                    data-name="{{ m.model|lower }}"
+                    data-label="{{ m.name|lower }}">
+                  <td class="model-name"><code>{{ m.model }}</code></td>
+                  <td>
+                    {{ m.name|default:"—" }}
+                    {% if m.transient %}
+                      <span class="badge bg-secondary ms-1">transient</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-secondary">
+                      {{ m.state|default:"—" }}
+                    </span>
+                  </td>
+                  <td class="text-end">{{ m.field_count }}</td>
+                  <td class="text-end">{{ m.relation_count }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="{% url 'data_explorer:model' instance.pk m.model %}">
+                      Browse data <i class="bi bi-arrow-right-short"></i>
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="model-search-empty" class="empty-state fade-up mt-3">
+        <span class="empty-icon"><i class="bi bi-search"></i></span>
+        <h3 class="h6 mb-1">No model matches</h3>
+        <p class="text-muted small mb-0">Try a different keyword.</p>
+      </div>
+    {% else %}
+      <div class="empty-state fade-up">
+        <span class="empty-icon"><i class="bi bi-database"></i></span>
+        <h3 class="h6 mb-1">No models in this audit</h3>
+        <p class="text-muted small mb-0">
+          The audit completed without capturing any model — try running it again.
+        </p>
+      </div>
+    {% endif %}
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if latest_audit and models %}
+<script>
+  // Lightweight client-side filter for the model table.
+  (function () {
+    var input = document.getElementById('model-search');
+    var rows = Array.prototype.slice.call(
+      document.querySelectorAll('#model-table-body .model-row')
+    );
+    var counter = document.getElementById('visible-count');
+    var emptyState = document.getElementById('model-search-empty');
+    if (!input || !rows.length) return;
+
+    function apply() {
+      var q = (input.value || '').trim().toLowerCase();
+      var visible = 0;
+      rows.forEach(function (row) {
+        var match = !q ||
+          row.dataset.name.indexOf(q) !== -1 ||
+          row.dataset.label.indexOf(q) !== -1;
+        row.classList.toggle('is-hidden', !match);
+        if (match) visible++;
+      });
+      counter.textContent = visible;
+      if (emptyState) {
+        emptyState.style.display = (visible === 0 && q) ? '' : 'none';
+      }
+    }
+    input.addEventListener('input', apply);
+  })();
+</script>
+{% endif %}
+{% endblock %}

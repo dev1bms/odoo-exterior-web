@@ -71,6 +71,28 @@
     </div>
   </div>
 
+  {# ---------- Data Explorer CTA ---------- #}
+  <div class="app-card p-4 mb-4 fade-up"
+       style="background:linear-gradient(135deg,#eef2ff 0%, #faf5ff 100%);">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <span class="feature-icon mb-0" style="margin-bottom:0;">
+          <i class="bi bi-table"></i>
+        </span>
+        <div>
+          <h2 class="h5 fw-bold mb-1">Data Explorer</h2>
+          <p class="text-muted small mb-0">
+            Browse and export live Odoo records using your audit catalog —
+            read-only, paginated, with field selection and CSV/JSON export.
+          </p>
+        </div>
+      </div>
+      <a class="btn btn-primary" href="{% url 'data_explorer:index' %}">
+        <i class="bi bi-arrow-right me-1"></i>Open Data Explorer
+      </a>
+    </div>
+  </div>
+
   {# ---------- Instances list ---------- #}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="h5 mb-0"><i class="bi bi-hdd-network me-2 text-muted"></i>Your Odoo instances</h2>

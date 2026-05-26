@@ -13,4 +13,8 @@ urlpatterns = [
     path("accounts/", include(("accounts.urls", "accounts"), namespace="accounts")),
     path("instances/", include(("instances.urls", "instances"), namespace="instances")),
     path("audits/", include(("audits.urls", "audits"), namespace="audits")),
+    path(
+        "data-explorer/",
+        include(("data_explorer.urls", "data_explorer"), namespace="data_explorer"),
+    ),
 ]

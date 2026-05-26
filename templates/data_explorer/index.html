@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Data Explorer · Odoo Exterior{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+
+  {# ---------- Header ---------- #}
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4 fade-up">
+    <div>
+      <span class="section-kicker">Live data</span>
+      <h1 class="h3 fw-bold mt-2 mb-1">
+        <i class="bi bi-table me-1"></i>Data Explorer
+      </h1>
+      <p class="text-muted mb-0">
+        Browse live Odoo records using your latest audit metadata catalog.
+      </p>
+    </div>
+    <div>
+      <a class="btn btn-outline-secondary" href="{% url 'instances:dashboard' %}">
+        <i class="bi bi-arrow-left me-1"></i>Back to dashboard
+      </a>
+    </div>
+  </div>
+
+  {# ---------- Read-only callout ---------- #}
+  <div class="callout callout--info mb-4 fade-up">
+    <i class="bi bi-info-circle"></i>
+    <div>
+      <strong>Read-only by design.</strong>
+      Data Explorer queries your Odoo instance over XML-RPC using only allowlisted
+      read methods. The model/field catalog comes from your latest completed audit —
+      run a fresh audit any time the schema changes.
+    </div>
+  </div>
+
+  {# ---------- Instances ---------- #}
+  <h2 class="h5 mb-3"><i class="bi bi-hdd-network me-2 text-muted"></i>Your Odoo instances</h2>
+
+  {% if rows %}
+    <div class="row g-3 fade-up">
+      {% for row in rows %}
+        {% with instance=row.instance audit=row.latest_audit %}
+        <div class="col-md-6 col-lg-4">
+          <div class="app-card h-100 p-3 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <h3 class="h6 fw-bold mb-1">{{ instance.name }}</h3>
+                <code class="small text-muted">{{ instance.odoo_url }}</code>
+              </div>
+              <span class="status-badge status-badge--{{ instance.last_connection_status }}">
+                {{ instance.get_last_connection_status_display }}
+              </span>
+            </div>
+
+            <div class="small text-muted mb-3">
+              {% if audit %}
+                <div>
+                  <i class="bi bi-clock-history me-1"></i>
+                  Latest audit
+                  <a href="{{ audit.get_absolute_url }}">#{{ audit.id }}</a>
+                  <span class="ms-1">{{ audit.created_at|date:"M j, Y H:i" }}</span>
+                </div>
+                <div>
+                  <i class="bi bi-database me-1"></i>
+                  <strong>{{ row.model_count }}</strong>
+                  model{{ row.model_count|pluralize }} in catalog
+                </div>
+              {% else %}
+                <div class="text-warning">
+                  <i class="bi bi-exclamation-triangle me-1"></i>
+                  No completed audit yet — run one to populate the catalog.
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mt-auto d-flex gap-2">
+              {% if audit %}
+                <a class="btn btn-primary btn-sm flex-grow-1"
+                   href="{% url 'data_explorer:instance' instance.pk %}">
+                  <i class="bi bi-table me-1"></i>Open Data Explorer
+                </a>
+              {% else %}
+                <form action="{% url 'audits:run' instance.pk %}" method="post" class="flex-grow-1 m-0">
+                  {% csrf_token %}
+                  <button class="btn btn-outline-primary btn-sm w-100" type="submit">
+                    <i class="bi bi-play-fill me-1"></i>Run audit first
+                  </button>
+                </form>
+              {% endif %}
+              <a class="btn btn-outline-secondary btn-sm"
+                 href="{{ instance.get_absolute_url }}"
+                 title="Instance settings">
+                <i class="bi bi-gear"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state fade-up">
+      <span class="empty-icon"><i class="bi bi-hdd-network"></i></span>
+      <h3 class="h5 mb-1">No Odoo instance yet</h3>
+      <p class="text-muted mb-3">
+        Add your first instance to test the connection, run an audit, then come back
+        here to browse live data.
+      </p>
+      <a class="btn btn-primary" href="{% url 'instances:create' %}">
+        <i class="bi bi-plus-lg me-1"></i>Add Odoo instance
+      </a>
+    </div>
+  {% endif %}
+
+</section>
+{% endblock %}

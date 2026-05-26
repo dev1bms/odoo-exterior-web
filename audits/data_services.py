@@ -484,3 +484,137 @@ def records_to_csv(
     for record in records:
         writer.writerow([serialize_record_value(record.get(f)) for f in fields])
     return buffer.getvalue()
+
+
+# --------------------------------------------------------------------- #
+# Shared helpers used by *both* the audit-scoped Data Explorer
+# (/audits/<id>/models/<model_name>/data/) and the top-level Data
+# Explorer (/data-explorer/instance/<id>/model/<model_name>/).
+# --------------------------------------------------------------------- #
+
+def get_latest_completed_audit_for_instance(instance):
+    """Return the most recent ``COMPLETED`` audit for ``instance`` or ``None``.
+
+    Used as the metadata catalog (models / fields) for the top-level Data
+    Explorer when the user did not pick a specific audit.
+    """
+    # Lazy import to avoid an import cycle at module load time.
+    from .models import AuditRun
+
+    return (
+        AuditRun.objects
+        .filter(
+            instance=instance,
+            status=AuditRun.Status.COMPLETED,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def validate_model_in_audit(audit, model_name: str) -> dict[str, Any] | None:
+    """Confirm ``model_name`` exists in ``audit.json_report["models"]``.
+
+    Returns the model record dict on success, ``None`` if the model is
+    not part of the audit. The view layer must turn ``None`` into a 404.
+    Cheaper than ``build_model_detail_payload`` when we only need the
+    audit to validate the URL segment.
+    """
+    return explorer.get_model_record(audit, model_name)
+
+
+def build_data_explorer_context(
+    request,
+    audit,
+    model_name: str,
+) -> dict[str, Any]:
+    """Single source of truth for the Data Explorer page context.
+
+    Both the audit-scoped Data Explorer (``audits.AuditModelDataView``)
+    and the top-level Data Explorer (``data_explorer.ModelView``) call
+    this. They differ only in URL prefix + breadcrumb — every business
+    decision (field allowlist, limit clamping, search domain, live
+    fetch, row pre-rendering, query-string preservation) lives here.
+
+    The caller is responsible for:
+
+    * loading ``audit`` with ownership scoping (only the audit's owner
+      ever reaches this function),
+    * confirming the model exists in the audit (we re-check defensively
+      and raise nothing — we just return ``None`` records on bad input).
+
+    The returned ``dict`` is template-ready and exposes a ``"result"``
+    :class:`FetchResult` plus all pagination markers and the
+    URL-encoded ``"query_string"`` used by paginate / export links.
+    """
+    available = get_model_available_fields(audit, model_name)
+    defaults = get_default_data_fields(audit, model_name)
+
+    # ----- Parse + clamp every query parameter (URL is fully untrusted). -- #
+    raw_fields = request.GET.get("fields", "")
+    requested_fields = [f.strip() for f in raw_fields.split(",") if f.strip()]
+    fields_used = sanitize_field_selection(
+        requested_fields, available, defaults=defaults
+    )
+    limit = clamp_limit(request.GET.get("limit"))
+    offset = clamp_offset(request.GET.get("offset"))
+    search_field = sanitize_search_field(
+        request.GET.get("search_field", ""), available
+    )
+    query = (request.GET.get("q") or "").strip()
+
+    # ----- Live fetch (read-only, error-translated). ---------------------- #
+    result = fetch_model_records(
+        audit,
+        model_name,
+        fields=fields_used,
+        limit=limit,
+        offset=offset,
+        search_field=search_field,
+        query=query,
+    )
+
+    # ----- Pre-render rows so templates stay declarative. ---------------- #
+    rows = build_data_rows(result.records, result.fields_used, available)
+
+    # ----- "Preserve filters" link query string. ------------------------- #
+    from urllib.parse import urlencode
+    qs_params: list[tuple[str, str]] = []
+    if result.fields_used:
+        qs_params.append(("fields", ",".join(result.fields_used)))
+    qs_params.append(("limit", str(limit)))
+    if search_field:
+        qs_params.append(("search_field", search_field))
+    if query:
+        qs_params.append(("q", query))
+    query_string = urlencode(qs_params)
+
+    showing_from = (offset + 1) if result.records else 0
+    showing_to = offset + len(result.records)
+    return {
+        "audit": audit,
+        "instance": audit.instance,
+        "model_name": model_name,
+        "model_record": validate_model_in_audit(audit, model_name) or {},
+        "available_fields": available,
+        "fields_used": result.fields_used,
+        "limit": limit,
+        "offset": offset,
+        "search_field": search_field,
+        "query": query,
+        "result": result,
+        "rows": rows,
+        "allowed_limits": ALLOWED_LIMITS,
+        "data_export_formats": DATA_EXPORT_FORMATS,
+        "query_string": query_string,
+        "showing_from": showing_from,
+        "showing_to": showing_to,
+        "next_offset": offset + limit,
+        "prev_offset": max(0, offset - limit),
+    }
+
+
+def export_filename_stem(audit, model_name: str) -> str:
+    """Return the ``audit_<id>_model_<safe>_data`` stem used by both export
+    views, so JSON and CSV files share a consistent naming scheme."""
+    return f"audit_{audit.pk}_model_{explorer.safe_model_filename(model_name)}_data"
