@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}{{ model_name }} · Audit #{{ audit.id }} · Odoo Exterior{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Page-local rules — keep close to the explorer styling for consistency. */
+  .model-table { font-size: 0.88rem; }
+  .model-table td, .model-table th { vertical-align: top; }
+  .model-table td.cell-empty { color: var(--color-subtle, #94a3b8); }
+  .model-table td.cell-code,
+  .model-table td.cell-preview {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .model-table td.cell-preview { white-space: pre-wrap; max-width: 28rem; }
+  .model-table td.cell-truncate { max-width: 22rem; }
+  .model-table td.cell-truncate .cell-inner {
+    display: inline-block; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+  }
+  .pill {
+    display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+    font-size: 0.74rem; font-weight: 600; background: #e2e8f0; color: #475569;
+  }
+  .pill-bool-true  { background: #dcfce7; color: #15803d; }
+  .pill-bool-false { background: #f1f5f9; color: #64748b; }
+
+  .model-overview dt { font-size: 0.74rem; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--color-muted, #64748b); }
+  .model-overview dd { font-size: 0.95rem; margin-bottom: 0.8rem; }
+
+  .section-anchor { scroll-margin-top: 5rem; }
+  .raw-json-pre {
+    max-height: 32rem; overflow: auto;
+    background: #0f172a; color: #e2e8f0;
+    padding: 1rem; border-radius: 0.5rem;
+    font-size: 0.78rem; line-height: 1.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+
+  {# ---------- Breadcrumb ---------- #}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ audit.get_absolute_url }}">Audit #{{ audit.id }}</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'audits:explorer' audit.pk 'models' %}">Models</a>
+      </li>
+      <li class="breadcrumb-item active">
+        <code>{{ model_name }}</code>
+      </li>
+    </ol>
+  </nav>
+
+  {# ---------- Header card ---------- #}
+  <div class="app-card p-4 p-md-4 mb-4 fade-up">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <span class="feature-icon mb-0" style="margin-bottom:0;">
+          <i class="bi bi-database"></i>
+        </span>
+        <div>
+          <h1 class="h4 fw-bold mb-1">
+            <code>{{ model_name }}</code>
+            {% if model_record.name and model_record.name != model_name %}
+              <span class="text-muted small ms-2 align-middle">{{ model_record.name }}</span>
+            {% endif %}
+          </h1>
+          <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
+            {% if model_record.state %}
+              <span class="pill">{{ model_record.state }}</span>
+            {% endif %}
+            {% if model_record.transient %}
+              <span class="pill pill-bool-true">
+                <i class="bi bi-clock-history"></i> transient
+              </span>
+            {% endif %}
+            {% if model_record.modules %}
+              <span><i class="bi bi-box-seam me-1"></i>{{ model_record.modules }}</span>
+            {% endif %}
+            <span>·</span>
+            <span>Audit <a href="{{ audit.get_absolute_url }}">#{{ audit.id }}</a></span>
+            <span>on <strong>{{ audit.instance.name }}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary"
+           href="{% url 'audits:explorer' audit.pk 'models' %}">
+          <i class="bi bi-arrow-left me-1"></i>Back to Models
+        </a>
+        <a class="btn btn-outline-primary"
+           href="{% url 'audits:export_model_detail' audit.pk model_name 'json' %}">
+          <i class="bi bi-filetype-json me-1"></i>JSON
+        </a>
+        <a class="btn btn-outline-primary"
+           href="{% url 'audits:export_model_detail' audit.pk model_name 'md' %}">
+          <i class="bi bi-filetype-md me-1"></i>Markdown
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Summary metric strip ---------- #}
+  <div class="row g-3 mb-4">
+    {% for card in metric_cards %}
+      <div class="col-6 col-md-4 col-lg-3 col-xl">
+        <a class="metric-card metric-card--link hover-lift fade-up d-block text-decoration-none text-reset h-100"
+           href="#{{ card.anchor }}">
+          <div class="d-flex justify-content-between align-items-start">
+            <span class="metric-icon"><i class="bi {{ card.icon }}"></i></span>
+            <i class="bi bi-arrow-down text-muted metric-card__arrow"></i>
+          </div>
+          <div class="metric-value">{{ card.count }}</div>
+          <div class="metric-label">{{ card.title }}</div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# ---------- Overview ---------- #}
+  <h2 class="h5 mb-3 mt-4 section-anchor" id="section-overview">
+    <i class="bi bi-info-circle me-2 text-muted"></i>Overview
+  </h2>
+  <div class="app-card p-4 mb-4 fade-up">
+    <dl class="row model-overview mb-0">
+      <div class="col-md-6 col-lg-4">
+        <dt>ID</dt>
+        <dd>{{ model_record.id|default:"—" }}</dd>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <dt>Technical name</dt>
+        <dd><code>{{ model_name }}</code></dd>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <dt>Display name</dt>
+        <dd>{{ model_record.name|default:"—" }}</dd>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <dt>State</dt>
+        <dd>
+          {% if model_record.state %}
+            <span class="pill">{{ model_record.state }}</span>
+          {% else %}—{% endif %}
+        </dd>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <dt>Transient</dt>
+        <dd>
+          <span class="pill {% if model_record.transient %}pill-bool-true{% else %}pill-bool-false{% endif %}">
+            <i class="bi {% if model_record.transient %}bi-check2{% else %}bi-dash{% endif %}"></i>
+            {% if model_record.transient %}true{% else %}false{% endif %}
+          </span>
+        </dd>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <dt>Modules</dt>
+        <dd>
+          {% if model_record.modules %}
+            <code>{{ model_record.modules }}</code>
+          {% else %}—{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  {# ------------------------------------------------------------- #
+     Per-section tables. The first table (Fields) gets a search input;
+     the rest expose data-search attributes so the same JS helper can
+     be enabled by adding a search input above them if needed.
+     ------------------------------------------------------------- #}
+
+  {% for section in sections %}
+    {% if section.slug == 'relationships' %}
+      <h2 class="h5 mb-3 mt-5 section-anchor" id="section-{{ section.slug }}">
+        <i class="bi {{ section.icon }} me-2 text-muted"></i>{{ section.title }}
+      </h2>
+
+      <div class="row g-3 fade-up">
+        {# ---- Outgoing ---- #}
+        <div class="col-lg-6">
+          <div class="app-card overflow-hidden h-100">
+            <div class="px-3 py-2 d-flex justify-content-between align-items-center"
+                 style="border-bottom:1px solid var(--color-border,#e5e7eb);">
+              <span class="small fw-semibold">
+                <i class="bi bi-arrow-up-right me-1"></i>Outgoing
+                <span class="badge bg-light text-dark ms-1">{{ section.outgoing.count }}</span>
+              </span>
+              <span class="small text-muted">Fields on this model referencing others</span>
+            </div>
+            {% if section.outgoing.records %}
+              <div class="table-responsive">
+                {% include "audits/_partials/_model_table.html" with columns=section.outgoing.columns rows=section.outgoing.rows %}
+              </div>
+            {% else %}
+              <div class="px-3 py-4 text-center text-muted small">No outgoing relations.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {# ---- Incoming ---- #}
+        <div class="col-lg-6">
+          <div class="app-card overflow-hidden h-100">
+            <div class="px-3 py-2 d-flex justify-content-between align-items-center"
+                 style="border-bottom:1px solid var(--color-border,#e5e7eb);">
+              <span class="small fw-semibold">
+                <i class="bi bi-arrow-down-left me-1"></i>Incoming
+                <span class="badge bg-light text-dark ms-1">{{ section.incoming.count }}</span>
+              </span>
+              <span class="small text-muted">Fields on other models pointing here</span>
+            </div>
+            {% if section.incoming.records %}
+              <div class="table-responsive">
+                {% include "audits/_partials/_model_table.html" with columns=section.incoming.columns rows=section.incoming.rows %}
+              </div>
+            {% else %}
+              <div class="px-3 py-4 text-center text-muted small">No incoming relations.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    {% else %}
+      <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+        <h2 class="h5 mb-0 section-anchor" id="section-{{ section.slug }}">
+          <i class="bi {{ section.icon }} me-2 text-muted"></i>{{ section.title }}
+          <span class="badge bg-light text-dark ms-1">{{ section.count }}</span>
+        </h2>
+        {% if section.slug == 'fields' and section.records %}
+          <div class="d-flex align-items-center gap-2">
+            <div class="position-relative">
+              <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-muted"
+                 style="pointer-events:none;"></i>
+              <input type="search"
+                     class="form-control form-control-sm ps-5 model-section-search"
+                     data-target="model-section-{{ section.slug }}"
+                     placeholder="Search {{ section.title|lower }}…"
+                     autocomplete="off">
+            </div>
+            <span class="small text-muted model-section-counter"
+                  data-counter-for="model-section-{{ section.slug }}">
+              {{ section.count }}/{{ section.count }}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if section.records %}
+        <div class="app-card overflow-hidden fade-up">
+          <div class="table-responsive">
+            <table class="table table-hover model-table mb-0" id="model-section-{{ section.slug }}">
+              <thead class="table-light">
+                <tr>{% for col in section.columns %}<th>{{ col.label }}</th>{% endfor %}</tr>
+              </thead>
+              <tbody>
+                {% for row in section.rows %}
+                  <tr class="model-row">
+                    {% for cell in row %}
+                      {% include "audits/_partials/_model_cell.html" with cell=cell %}
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+                <tr class="no-match-row d-none">
+                  <td colspan="{{ section.columns|length }}" class="text-center text-muted py-4">
+                    <i class="bi bi-search me-1"></i>
+                    No records match your search.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state fade-up">
+          <span class="empty-icon"><i class="bi {{ section.icon }}"></i></span>
+          <h3 class="h6 mb-1">No {{ section.title|lower }} on this model</h3>
+          <p class="text-muted small mb-0">
+            {% if section.slug == 'menus' %}
+              No menu in the audit could be reliably linked to this model.
+            {% else %}
+              The audit contains no {{ section.title|lower }} for <code>{{ model_name }}</code>.
+            {% endif %}
+          </p>
+        </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {# ---------- Raw payload (collapsible) ---------- #}
+  <h2 class="h5 mb-3 mt-5 section-anchor" id="section-raw">
+    <i class="bi bi-braces me-2 text-muted"></i>Raw payload
+  </h2>
+  <div class="app-card p-3 fade-up">
+    <button class="btn btn-sm btn-outline-secondary"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#raw-payload-pane"
+            aria-expanded="false"
+            aria-controls="raw-payload-pane">
+      <i class="bi bi-code-square me-1"></i>View model payload JSON
+    </button>
+    <div class="collapse mt-3" id="raw-payload-pane">
+      <pre class="raw-json-pre mb-0">{{ raw_payload_json }}</pre>
+    </div>
+  </div>
+
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    // One reusable client-side filter helper, wired to every input that
+    // declares its target table via data-target.
+    document.querySelectorAll('input.model-section-search').forEach(function (input) {
+      var tableId = input.dataset.target;
+      var table = document.getElementById(tableId);
+      if (!table) return;
+      var rows = Array.prototype.slice.call(table.querySelectorAll('tr.model-row'));
+      var noMatch = table.querySelector('tr.no-match-row');
+      var counter = document.querySelector(
+        'span.model-section-counter[data-counter-for="' + tableId + '"]'
+      );
+      var total = rows.length;
+      rows.forEach(function (row) {
+        row.dataset.search = row.innerText.toLowerCase();
+      });
+      function apply() {
+        var q = input.value.trim().toLowerCase();
+        var shown = 0;
+        rows.forEach(function (row) {
+          var match = !q || row.dataset.search.indexOf(q) !== -1;
+          row.classList.toggle('d-none', !match);
+          if (match) shown++;
+        });
+        if (counter) counter.textContent = shown + '/' + total;
+        if (noMatch) noMatch.classList.toggle('d-none', shown !== 0);
+      }
+      input.addEventListener('input', apply);
+      input.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') { input.value = ''; apply(); }
+      });
+    });
+  })();
+</script>
+{% endblock %}

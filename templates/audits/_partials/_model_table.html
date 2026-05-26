@@ -1,0 +1,14 @@
+<table class="table table-sm model-table mb-0">
+  <thead class="table-light">
+    <tr>{% for col in columns %}<th>{{ col.label }}</th>{% endfor %}</tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        {% for cell in row %}
+          {% include "audits/_partials/_model_cell.html" with cell=cell %}
+        {% endfor %}
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

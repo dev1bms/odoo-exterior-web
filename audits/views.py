@@ -53,13 +53,27 @@ class AuditExplorerView(_OwnedAuditMixin, DetailView):
 
         records = explorer.get_category_records(self.object, category)
         columns = cfg["columns"]
+        rows = explorer.build_rows(records, columns)
+
+        # For the "models" category, pre-resolve the technical name of each
+        # row so the template can render the drill-down link without
+        # touching potentially-missing dict keys (which would raise
+        # ``VariableDoesNotExist`` in templates).
+        if category == "models":
+            drill_targets = [
+                explorer.get_model_identifier(rec) or "" for rec in records
+            ]
+        else:
+            drill_targets = [""] * len(records)
+
         ctx.update(
             {
                 "category": category,
                 "category_config": cfg,
                 "columns": columns,
                 "records": records,
-                "rows": explorer.build_rows(records, columns),
+                "rows": rows,
+                "record_rows": list(zip(records, rows, drill_targets)),
                 "count": len(records),
                 "export_formats": explorer.EXPORT_FORMATS,
             }
@@ -83,19 +97,84 @@ class ExportCategoryView(_OwnedAuditMixin, View):
 
         if format == "json":
             body = explorer.records_to_json(records)
-            return self._attachment(body, "application/json", f"{filename_stem}.json")
+            return _attachment(body, "application/json", f"{filename_stem}.json")
         if format == "csv":
             body = explorer.records_to_csv(records, cfg["columns"])
-            return self._attachment(body, "text/csv", f"{filename_stem}.csv")
+            return _attachment(body, "text/csv", f"{filename_stem}.csv")
         # markdown
         body = explorer.records_to_markdown(audit, category, records)
-        return self._attachment(body, "text/markdown", f"{filename_stem}.md")
+        return _attachment(body, "text/markdown", f"{filename_stem}.md")
 
-    @staticmethod
-    def _attachment(body: str, content_type: str, filename: str) -> HttpResponse:
-        response = HttpResponse(body, content_type=f"{content_type}; charset=utf-8")
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        return response
+
+class AuditModelDetailView(_OwnedAuditMixin, DetailView):
+    """Per-model drill-down profile (fields, views, security, relationships)."""
+
+    template_name = "audits/audit_model_detail.html"
+    context_object_name = "audit"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        model_name = self.kwargs["model_name"]
+        payload = explorer.build_model_detail_payload(self.object, model_name)
+        if payload is None:
+            raise Http404(
+                f"Model {model_name!r} is not present in audit "
+                f"#{self.object.pk}."
+            )
+        ctx.update(
+            {
+                "model_name": model_name,
+                "payload": payload,
+                "model_record": payload["model_record"],
+                "summary": payload["summary"],
+                "metric_cards": explorer.build_model_detail_metric_cards(payload),
+                "sections": explorer.build_model_detail_section_rows(payload),
+                "fields": payload["fields"],
+                "views": payload["views"],
+                "server_actions": payload["server_actions"],
+                "window_actions": payload["window_actions"],
+                "menus": payload["menus"],
+                "access_rights": payload["access_rights"],
+                "record_rules": payload["record_rules"],
+                "relationships": payload["relationships"],
+                "model_export_formats": explorer.MODEL_EXPORT_FORMATS,
+                "raw_payload_json": explorer.model_detail_to_json(payload),
+            }
+        )
+        return ctx
+
+
+class ExportModelDetailView(_OwnedAuditMixin, View):
+    """Download a single model's drill-down profile as JSON or Markdown."""
+
+    def get(self, request, pk: int, model_name: str, format: str):
+        if format not in explorer.MODEL_EXPORT_FORMATS:
+            raise Http404(f"Unsupported export format: {format!r}")
+        audit = get_object_or_404(self.get_queryset(), pk=pk)
+        payload = explorer.build_model_detail_payload(audit, model_name)
+        if payload is None:
+            raise Http404(f"Model {model_name!r} not in audit.")
+
+        stem = f"audit_{audit.pk}_model_{explorer.safe_model_filename(model_name)}"
+        if format == "json":
+            return _attachment(
+                explorer.model_detail_to_json(payload),
+                "application/json",
+                f"{stem}.json",
+            )
+        # markdown
+        return _attachment(
+            explorer.model_detail_to_markdown(audit, model_name, payload),
+            "text/markdown",
+            f"{stem}.md",
+        )
+
+
+def _attachment(body: str, content_type: str, filename: str) -> HttpResponse:
+    """Return an ``attachment`` HTTP response with the right content type."""
+    response = HttpResponse(body, content_type=f"{content_type}; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 class RunAuditView(LoginRequiredMixin, View):

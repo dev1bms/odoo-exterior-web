@@ -124,33 +124,42 @@
             </tr>
           </thead>
           <tbody>
-            {% for row in rows %}
-              <tr class="explorer-row">
-                {% for cell in row %}
-                  {% if cell.empty %}
-                    <td class="cell-empty">—</td>
-                  {% elif cell.kind == 'bool' %}
-                    <td>
-                      <span class="pill {% if cell.bool %}pill-bool-true{% else %}pill-bool-false{% endif %}">
-                        <i class="bi {% if cell.bool %}bi-check2{% else %}bi-dash{% endif %}"></i>
-                        {{ cell.display }}
-                      </span>
-                    </td>
-                  {% elif cell.kind == 'badge' %}
-                    <td><span class="pill">{{ cell.display }}</span></td>
-                  {% elif cell.kind == 'preview' %}
-                    <td class="cell-preview cell-truncate" title="{{ cell.title }}">{{ cell.display }}</td>
-                  {% elif cell.kind == 'code' %}
-                    <td class="cell-code cell-truncate" title="{{ cell.title }}">
-                      <span class="cell-inner">{{ cell.display }}</span>
-                    </td>
-                  {% else %}
-                    <td class="cell-truncate" title="{{ cell.title }}">
-                      <span class="cell-inner">{{ cell.display }}</span>
-                    </td>
-                  {% endif %}
-                {% endfor %}
-              </tr>
+            {% for record, row, drill_target in record_rows %}
+                <tr class="explorer-row">
+                  {% for cell in row %}
+                    {% if forloop.first and category == 'models' and drill_target %}
+                      {# Drill-down link for the technical name on the Models page. #}
+                      <td class="cell-code cell-truncate" title="{{ cell.title }}">
+                        <a class="cell-inner explorer-drill"
+                           href="{% url 'audits:model_detail' audit.pk drill_target %}">
+                          {{ cell.display }}
+                          <i class="bi bi-arrow-up-right ms-1 small text-muted"></i>
+                        </a>
+                      </td>
+                    {% elif cell.empty %}
+                      <td class="cell-empty">—</td>
+                    {% elif cell.kind == 'bool' %}
+                      <td>
+                        <span class="pill {% if cell.bool %}pill-bool-true{% else %}pill-bool-false{% endif %}">
+                          <i class="bi {% if cell.bool %}bi-check2{% else %}bi-dash{% endif %}"></i>
+                          {{ cell.display }}
+                        </span>
+                      </td>
+                    {% elif cell.kind == 'badge' %}
+                      <td><span class="pill">{{ cell.display }}</span></td>
+                    {% elif cell.kind == 'preview' %}
+                      <td class="cell-preview cell-truncate" title="{{ cell.title }}">{{ cell.display }}</td>
+                    {% elif cell.kind == 'code' %}
+                      <td class="cell-code cell-truncate" title="{{ cell.title }}">
+                        <span class="cell-inner">{{ cell.display }}</span>
+                      </td>
+                    {% else %}
+                      <td class="cell-truncate" title="{{ cell.title }}">
+                        <span class="cell-inner">{{ cell.display }}</span>
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
             {% endfor %}
             <tr class="no-match-row d-none">
               <td colspan="{{ columns|length }}" class="text-center text-muted py-4">
