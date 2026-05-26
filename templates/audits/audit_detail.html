@@ -81,15 +81,40 @@
   </ul>
 
   {# ---------- Overview / metrics ---------- #}
-  <h2 class="h5 mb-3" id="overview">
-    <i class="bi bi-graph-up-arrow me-2 text-muted"></i>Summary
-  </h2>
+  <div class="d-flex flex-wrap justify-content-between align-items-end mb-3">
+    <h2 class="h5 mb-0" id="overview">
+      <i class="bi bi-graph-up-arrow me-2 text-muted"></i>Summary
+    </h2>
+    {% if category_cards %}
+      <small class="text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        Click any metric to inspect and export its records.
+      </small>
+    {% endif %}
+  </div>
 
-  {% if audit.summary %}
+  {% if category_cards %}
+    <div class="row g-3 mb-4">
+      {% for card in category_cards %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <a class="metric-card metric-card--link hover-lift fade-up d-block text-decoration-none text-reset h-100"
+             href="{% url 'audits:explorer' audit.pk card.slug %}"
+             aria-label="Explore {{ card.title }} ({{ card.count }})">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="metric-icon"><i class="bi {{ card.icon }}"></i></span>
+              <i class="bi bi-arrow-up-right text-muted metric-card__arrow"></i>
+            </div>
+            <div class="metric-value">{{ card.count }}</div>
+            <div class="metric-label">{{ card.title }}</div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+  {% elif audit.summary %}
     <div class="row g-3 mb-4">
       {% for label, value in audit.summary.items %}
         <div class="col-6 col-md-4 col-lg-3">
-          <div class="metric-card hover-lift fade-up">
+          <div class="metric-card fade-up">
             <span class="metric-icon"><i class="bi bi-bar-chart"></i></span>
             <div class="metric-value">{{ value }}</div>
             <div class="metric-label">{{ label }}</div>

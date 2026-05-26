@@ -326,6 +326,25 @@ main { min-height: calc(100vh - 200px); }
   letter-spacing: 0.05em;
   margin-top: 0.3rem;
 }
+/* Linkable variant: arrow lifts in on hover, card gets a faint border accent */
+.metric-card--link { cursor: pointer; }
+.metric-card--link .metric-card__arrow {
+  opacity: 0;
+  transform: translate(-4px, 4px);
+  transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+.metric-card--link:hover {
+  border-color: var(--color-primary);
+}
+.metric-card--link:hover .metric-card__arrow {
+  opacity: 1;
+  transform: translate(0, 0);
+  color: var(--color-primary) !important;
+}
+.metric-card--link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 
 .preview-card {
   background: linear-gradient(180deg, #ffffff, #f1f5f9);

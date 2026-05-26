@@ -6,13 +6,14 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView
 
 from instances.models import OdooInstance
 
+from . import explorer
 from .models import AuditRun
 
 
@@ -30,6 +31,71 @@ class _OwnedAuditMixin(LoginRequiredMixin):
 class AuditDetailView(_OwnedAuditMixin, DetailView):
     template_name = "audits/audit_detail.html"
     context_object_name = "audit"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["category_cards"] = explorer.build_category_cards(self.object)
+        return ctx
+
+
+class AuditExplorerView(_OwnedAuditMixin, DetailView):
+    """Per-category browsable table backed by ``audit.json_report``."""
+
+    template_name = "audits/audit_category_explorer.html"
+    context_object_name = "audit"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        category = self.kwargs["category"]
+        cfg = explorer.get_category_config(category)
+        if cfg is None:
+            raise Http404(f"Unknown audit category: {category!r}")
+
+        records = explorer.get_category_records(self.object, category)
+        columns = cfg["columns"]
+        ctx.update(
+            {
+                "category": category,
+                "category_config": cfg,
+                "columns": columns,
+                "records": records,
+                "rows": explorer.build_rows(records, columns),
+                "count": len(records),
+                "export_formats": explorer.EXPORT_FORMATS,
+            }
+        )
+        return ctx
+
+
+class ExportCategoryView(_OwnedAuditMixin, View):
+    """Download a single category as JSON, CSV, or Markdown."""
+
+    def get(self, request, pk: int, category: str, format: str):
+        if format not in explorer.EXPORT_FORMATS:
+            raise Http404(f"Unsupported export format: {format!r}")
+        cfg = explorer.get_category_config(category)
+        if cfg is None:
+            raise Http404(f"Unknown audit category: {category!r}")
+
+        audit = get_object_or_404(self.get_queryset(), pk=pk)
+        records = explorer.get_category_records(audit, category)
+        filename_stem = f"audit_{audit.pk}_{category}"
+
+        if format == "json":
+            body = explorer.records_to_json(records)
+            return self._attachment(body, "application/json", f"{filename_stem}.json")
+        if format == "csv":
+            body = explorer.records_to_csv(records, cfg["columns"])
+            return self._attachment(body, "text/csv", f"{filename_stem}.csv")
+        # markdown
+        body = explorer.records_to_markdown(audit, category, records)
+        return self._attachment(body, "text/markdown", f"{filename_stem}.md")
+
+    @staticmethod
+    def _attachment(body: str, content_type: str, filename: str) -> HttpResponse:
+        response = HttpResponse(body, content_type=f"{content_type}; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class RunAuditView(LoginRequiredMixin, View):

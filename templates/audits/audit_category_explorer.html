@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}{{ category_config.title }} · Audit #{{ audit.id }} · Odoo Exterior{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Page-local rules for the explorer table */
+  .explorer-table { font-size: 0.88rem; }
+  .explorer-table td, .explorer-table th { vertical-align: top; }
+  .explorer-table td.cell-empty { color: var(--color-subtle, #94a3b8); }
+  .explorer-table td.cell-code,
+  .explorer-table td.cell-preview { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .explorer-table td.cell-preview { white-space: pre-wrap; max-width: 28rem; }
+  .explorer-table td.cell-truncate { max-width: 22rem; }
+  .explorer-table td.cell-truncate .cell-inner {
+    display: inline-block; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+  }
+  .pill {
+    display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+    font-size: 0.74rem; font-weight: 600; background: #e2e8f0; color: #475569;
+  }
+  .pill-bool-true  { background: #dcfce7; color: #15803d; }
+  .pill-bool-false { background: #f1f5f9; color: #64748b; }
+  .explorer-toolbar {
+    position: sticky; top: 4.2rem; z-index: 5;
+    background: rgba(247, 248, 250, 0.85);
+    backdrop-filter: saturate(180%) blur(8px);
+    padding: 0.75rem 0;
+  }
+  .no-match-row td { background: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ audit.instance.get_absolute_url }}">{{ audit.instance.name }}</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ audit.get_absolute_url }}">Audit #{{ audit.id }}</a>
+      </li>
+      <li class="breadcrumb-item active">{{ category_config.title }}</li>
+    </ol>
+  </nav>
+
+  {# ---------- Header ---------- #}
+  <div class="app-card p-4 p-md-4 mb-4 fade-up">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <span class="feature-icon mb-0" style="margin-bottom:0;">
+          <i class="bi {{ category_config.icon }}"></i>
+        </span>
+        <div>
+          <h1 class="h4 fw-bold mb-1">
+            {{ category_config.title }}
+            <span class="badge bg-light text-dark ms-1 align-middle">{{ count }}</span>
+          </h1>
+          <p class="text-muted small mb-0">
+            {{ category_config.description }}
+            ·
+            Audit <a href="{{ audit.get_absolute_url }}">#{{ audit.id }}</a>
+            on <strong>{{ audit.instance.name }}</strong>.
+          </p>
+        </div>
+      </div>
+      <div>
+        <a class="btn btn-outline-secondary" href="{{ audit.get_absolute_url }}">
+          <i class="bi bi-arrow-left me-1"></i>Back to audit
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Toolbar ---------- #}
+  <div class="explorer-toolbar mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-md">
+        <div class="position-relative">
+          <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-muted"
+             style="pointer-events:none;"></i>
+          <input type="search"
+                 id="explorer-search"
+                 class="form-control ps-5"
+                 placeholder="Search {{ category_config.title|lower }}…"
+                 autocomplete="off"
+                 {% if not records %}disabled{% endif %}>
+        </div>
+      </div>
+      <div class="col-12 col-md-auto">
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-outline-primary btn-sm"
+             href="{% url 'audits:export_category' audit.pk category 'json' %}">
+            <i class="bi bi-filetype-json me-1"></i>JSON
+          </a>
+          <a class="btn btn-outline-primary btn-sm"
+             href="{% url 'audits:export_category' audit.pk category 'csv' %}">
+            <i class="bi bi-filetype-csv me-1"></i>CSV
+          </a>
+          <a class="btn btn-outline-primary btn-sm"
+             href="{% url 'audits:export_category' audit.pk category 'md' %}">
+            <i class="bi bi-filetype-md me-1"></i>Markdown
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="small text-muted mt-2" id="explorer-summary">
+      Showing <span id="explorer-visible-count">{{ count }}</span>
+      of {{ count }} record{{ count|pluralize }}.
+    </div>
+  </div>
+
+  {# ---------- Table / empty state ---------- #}
+  {% if records %}
+    <div class="app-card overflow-hidden fade-up">
+      <div class="table-responsive">
+        <table class="table table-hover explorer-table mb-0" id="explorer-table">
+          <thead class="table-light">
+            <tr>
+              {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr class="explorer-row">
+                {% for cell in row %}
+                  {% if cell.empty %}
+                    <td class="cell-empty">—</td>
+                  {% elif cell.kind == 'bool' %}
+                    <td>
+                      <span class="pill {% if cell.bool %}pill-bool-true{% else %}pill-bool-false{% endif %}">
+                        <i class="bi {% if cell.bool %}bi-check2{% else %}bi-dash{% endif %}"></i>
+                        {{ cell.display }}
+                      </span>
+                    </td>
+                  {% elif cell.kind == 'badge' %}
+                    <td><span class="pill">{{ cell.display }}</span></td>
+                  {% elif cell.kind == 'preview' %}
+                    <td class="cell-preview cell-truncate" title="{{ cell.title }}">{{ cell.display }}</td>
+                  {% elif cell.kind == 'code' %}
+                    <td class="cell-code cell-truncate" title="{{ cell.title }}">
+                      <span class="cell-inner">{{ cell.display }}</span>
+                    </td>
+                  {% else %}
+                    <td class="cell-truncate" title="{{ cell.title }}">
+                      <span class="cell-inner">{{ cell.display }}</span>
+                    </td>
+                  {% endif %}
+                {% endfor %}
+              </tr>
+            {% endfor %}
+            <tr class="no-match-row d-none">
+              <td colspan="{{ columns|length }}" class="text-center text-muted py-4">
+                <i class="bi bi-search me-1"></i>
+                No records match your search.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state fade-up">
+      <span class="empty-icon"><i class="bi {{ category_config.icon }}"></i></span>
+      <h3 class="h6 mb-1">No {{ category_config.title|lower }} in this audit</h3>
+      <p class="text-muted small mb-0">
+        The audit ran successfully but did not extract any records for this category.
+      </p>
+    </div>
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if records %}
+<script>
+  (function () {
+    var input = document.getElementById('explorer-search');
+    var table = document.getElementById('explorer-table');
+    var visibleEl = document.getElementById('explorer-visible-count');
+    if (!input || !table) return;
+
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tr.explorer-row'));
+    var noMatch = table.querySelector('tr.no-match-row');
+
+    // Pre-compute lowercase searchable text for each row.
+    rows.forEach(function (row) {
+      row.dataset.search = row.innerText.toLowerCase();
+    });
+
+    function applyFilter() {
+      var q = input.value.trim().toLowerCase();
+      var shown = 0;
+      rows.forEach(function (row) {
+        var match = !q || row.dataset.search.indexOf(q) !== -1;
+        row.classList.toggle('d-none', !match);
+        if (match) shown++;
+      });
+      if (visibleEl) visibleEl.textContent = shown;
+      if (noMatch) noMatch.classList.toggle('d-none', shown !== 0);
+    }
+
+    input.addEventListener('input', applyFilter);
+    // Allow Esc to clear quickly.
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { input.value = ''; applyFilter(); }
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}
