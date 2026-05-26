@@ -1,0 +1,43 @@
+{# Shared header for JSON / Markdown viewer pages. #}
+<div class="app-card p-4 mb-4 fade-up viewer-toolbar">
+  <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+    <div class="d-flex align-items-start gap-3">
+      <span class="feature-icon mb-0" style="margin-bottom:0;">
+        <i class="bi {% if format_label == 'JSON' %}bi-filetype-json{% else %}bi-filetype-md{% endif %}"></i>
+      </span>
+      <div>
+        <h1 class="h4 fw-bold mb-1">{{ viewer_title }}</h1>
+        {% if viewer_subtitle %}
+          <p class="text-muted small mb-0">{{ viewer_subtitle }}</p>
+        {% endif %}
+        <div class="d-flex flex-wrap gap-2 mt-2 small text-muted">
+          {% if viewer_source %}
+            <span><i class="bi bi-folder2-open me-1"></i>{{ viewer_source }}</span>
+          {% endif %}
+          {% if record_count is not None %}
+            <span><i class="bi bi-list-ol me-1"></i>{{ record_count }} record{{ record_count|pluralize }}</span>
+          {% endif %}
+          <span class="badge bg-light text-secondary">{{ format_label }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-start">
+      <a class="btn btn-outline-secondary" href="{{ back_url }}">
+        <i class="bi bi-arrow-left me-1"></i>{{ back_label }}
+      </a>
+      {% if has_content %}
+        <button type="button" class="btn btn-outline-secondary btn-copy-viewer"
+                data-copy-target="{{ copy_target_id|default:'viewer-content' }}"
+                data-copy-feedback="viewer-copy-feedback">
+          <i class="bi bi-clipboard me-1"></i>Copy {{ format_label }}
+        </button>
+        <a class="btn btn-outline-primary" href="{{ download_url }}">
+          <i class="bi bi-download me-1"></i>{{ download_label }}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  <div id="viewer-copy-feedback" class="small text-success mt-2 d-none" role="status" aria-live="polite">
+    <i class="bi bi-check2 me-1"></i>Copied to clipboard
+  </div>
+</div>

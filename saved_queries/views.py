@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
-from audits import data_services
+from audits import data_services, viewer_utils
 
 from .forms import SavedQueryForm
 from .models import SavedQuery
@@ -114,6 +114,50 @@ class SavedQueryRunView(OwnerQuerysetMixin, View):
         saved_query.last_run_at = timezone.now()
         saved_query.save(update_fields=["last_run_at", "updated_at"])
         return TemplateResponse(request, self.template_name, ctx)
+
+
+class SavedQueryViewJsonView(OwnerQuerysetMixin, View):
+    template_name = "audits/view_json.html"
+
+    def get(self, request, pk: int):
+        saved_query = get_object_or_404(self.get_queryset(), pk=pk)
+        ctx = build_saved_query_result_context(saved_query)
+        result = ctx["result"]
+
+        if not result.ok:
+            json_text = viewer_utils.pretty_json(
+                {"error": result.error, "records": []}
+            )
+            empty_msg = result.error or "Could not load live data."
+        else:
+            json_text = data_services.records_to_json(result.records)
+            empty_msg = ""
+
+        viewer_ctx = viewer_utils.json_viewer_context(
+            page_title=f"{saved_query.name} · Saved Query · JSON",
+            title=f"Saved query · {saved_query.name}",
+            subtitle=f"{saved_query.instance.name} · {saved_query.model_name}",
+            back_url=reverse("saved_queries:run", kwargs={"pk": pk}),
+            back_label="Back to run results",
+            download_url=reverse("saved_queries:export", kwargs={"pk": pk, "format": "json"}),
+            json_text=json_text,
+            source=f"Saved query · limit {saved_query.limit}",
+            record_count=len(result.records) if result.ok else 0,
+            empty_message=empty_msg,
+            breadcrumbs=[
+                {"label": "Dashboard", "url": reverse("instances:dashboard")},
+                {
+                    "label": "Saved Queries",
+                    "url": reverse("saved_queries:list"),
+                },
+                {
+                    "label": saved_query.name,
+                    "url": saved_query.get_absolute_url(),
+                },
+                {"label": "JSON", "url": ""},
+            ],
+        )
+        return TemplateResponse(request, self.template_name, viewer_ctx)
 
 
 class SavedQueryExportView(OwnerQuerysetMixin, View):

@@ -13,7 +13,6 @@
 {% block content %}
 <section class="container py-4 py-lg-5">
 
-  {# ---------- Breadcrumb ---------- #}
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb small">
       <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
@@ -22,7 +21,6 @@
     </ol>
   </nav>
 
-  {# ---------- Header card ---------- #}
   <div class="app-card p-4 mb-4 fade-up">
     <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
       <div class="d-flex align-items-start gap-3">
@@ -56,7 +54,6 @@
   </div>
 
   {% if not latest_audit %}
-    {# ---------- No audit yet ---------- #}
     <div class="callout callout--warning mb-4 fade-up">
       <i class="bi bi-exclamation-triangle"></i>
       <div>
@@ -80,7 +77,6 @@
     </div>
 
   {% else %}
-    {# ---------- Catalog source banner ---------- #}
     <div class="callout callout--info mb-4 fade-up">
       <i class="bi bi-info-circle"></i>
       <div>
@@ -98,7 +94,6 @@
       </div>
     </div>
 
-    {# ---------- Quick links ---------- #}
     {% if quick_links %}
       <div class="mb-3 fade-up">
         <span class="small text-muted me-2">Quick links:</span>
@@ -111,7 +106,6 @@
       </div>
     {% endif %}
 
-    {# ---------- Search box ---------- #}
     <div class="row g-2 align-items-center mb-3 fade-up">
       <div class="col-md-6">
         <div class="input-group">
@@ -127,7 +121,6 @@
       </div>
     </div>
 
-    {# ---------- Model table ---------- #}
     {% if models %}
       <div class="app-card overflow-hidden fade-up">
         <div class="table-responsive">

@@ -40,7 +40,6 @@
 {% block content %}
 <section class="container py-4 py-lg-5">
 
-  {# ---------- Breadcrumb ---------- #}
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb small">
       <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
@@ -60,7 +59,6 @@
     </ol>
   </nav>
 
-  {# ---------- Header card ---------- #}
   <div class="app-card p-4 mb-4 fade-up">
     <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
       <div class="d-flex align-items-start gap-3">
@@ -90,9 +88,13 @@
            href="{% url 'audits:model_detail' audit.pk model_name %}">
           <i class="bi bi-arrow-left me-1"></i>Back to model profile
         </a>
+        <a class="btn btn-outline-secondary"
+           href="{% url 'audits:view_model_data_json' audit.pk model_name %}?{{ query_string }}">
+          <i class="bi bi-eye me-1"></i>View JSON
+        </a>
         <a class="btn btn-outline-primary"
            href="{% url 'audits:export_model_data' audit.pk model_name 'json' %}?{{ query_string }}">
-          <i class="bi bi-filetype-json me-1"></i>JSON
+          <i class="bi bi-download me-1"></i>JSON
         </a>
         <a class="btn btn-outline-primary"
            href="{% url 'audits:export_model_data' audit.pk model_name 'csv' %}?{{ query_string }}">
@@ -102,7 +104,6 @@
     </div>
   </div>
 
-  {# ---------- Read-only callout ---------- #}
   <div class="callout callout--info mb-4 fade-up">
     <i class="bi bi-info-circle"></i>
     <div>
@@ -114,7 +115,6 @@
     </div>
   </div>
 
-  {# ---------- Query form ---------- #}
   <form method="get" class="app-card p-3 p-md-4 mb-4 fade-up" id="data-query-form">
     <div class="row g-3">
 
@@ -194,7 +194,6 @@
     </div>
   </form>
 
-  {# ---------- Results ---------- #}
   {% if not result.ok %}
     <div class="callout callout--danger fade-up">
       <i class="bi bi-x-octagon"></i>

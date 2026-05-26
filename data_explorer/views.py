@@ -32,7 +32,7 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.views import View
 
-from audits import data_services
+from audits import data_services, viewer_utils
 from audits.models import AuditRun
 from instances.models import OdooInstance
 
@@ -211,6 +211,82 @@ class DataExplorerModelView(_ModelEntryMixin, View):
         # template's mental model crisp).
         ctx["instance"] = instance
         return TemplateResponse(request, self.template_name, ctx)
+
+
+class DataExplorerViewJsonView(_ModelEntryMixin, View):
+    """In-browser JSON view of the current Data Explorer slice."""
+
+    template_name = "audits/view_json.html"
+
+    def get(self, request, instance_id: int, model_name: str):
+        instance, latest = self._resolve(instance_id, model_name)
+        ctx = data_services.build_data_explorer_context(request, latest, model_name)
+        result = ctx["result"]
+        query_suffix = f"?{ctx['query_string']}" if ctx.get("query_string") else ""
+
+        if not result.ok:
+            json_text = viewer_utils.pretty_json(
+                {"error": result.error, "records": []}
+            )
+            empty_msg = result.error or "Could not load live data."
+        else:
+            json_text = data_services.records_to_json(result.records)
+            empty_msg = ""
+
+        from django.urls import reverse
+
+        viewer_ctx = viewer_utils.json_viewer_context(
+            page_title=f"{model_name} · Data Explorer · JSON",
+            title=f"Live records · {model_name}",
+            subtitle=f"{instance.name} · audit #{latest.pk}",
+            back_url=reverse(
+                "data_explorer:model",
+                kwargs={"instance_id": instance_id, "model_name": model_name},
+            ),
+            back_label="Back to Data Explorer",
+            download_url=(
+                reverse(
+                    "data_explorer:export",
+                    kwargs={
+                        "instance_id": instance_id,
+                        "model_name": model_name,
+                        "format": "json",
+                    },
+                )
+                + query_suffix
+            ),
+            json_text=json_text,
+            source=f"Data Explorer · limit {ctx['limit']}",
+            record_count=len(result.records) if result.ok else 0,
+            empty_message=empty_msg,
+            breadcrumbs=[
+                {"label": "Dashboard", "url": reverse("instances:dashboard")},
+                {
+                    "label": "Data Explorer",
+                    "url": reverse("data_explorer:index"),
+                },
+                {
+                    "label": instance.name,
+                    "url": reverse(
+                        "data_explorer:instance", kwargs={"instance_id": instance_id}
+                    ),
+                },
+                {
+                    "label": model_name,
+                    "url": reverse(
+                        "data_explorer:model",
+                        kwargs={
+                            "instance_id": instance_id,
+                            "model_name": model_name,
+                        },
+                    ),
+                },
+                {"label": "JSON", "url": ""},
+            ],
+        )
+        from django.template.response import TemplateResponse
+
+        return TemplateResponse(request, self.template_name, viewer_ctx)
 
 
 class DataExplorerExportView(_ModelEntryMixin, View):

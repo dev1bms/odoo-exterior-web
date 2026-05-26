@@ -14,6 +14,7 @@ from .views import (
     DataExplorerIndexView,
     DataExplorerInstanceView,
     DataExplorerModelView,
+    DataExplorerViewJsonView,
 )
 
 
@@ -24,7 +25,12 @@ urlpatterns = [
         DataExplorerInstanceView.as_view(),
         name="instance",
     ),
-    # Export route first — its tail (`/export/<format>/`) is more specific.
+    path(
+        "instance/<int:instance_id>/model/<path:model_name>/view/json/",
+        DataExplorerViewJsonView.as_view(),
+        name="view_json",
+    ),
+    # Export route before model browse — tail (`/export/<format>/`) is specific.
     path(
         "instance/<int:instance_id>/model/<path:model_name>/export/<str:format>/",
         DataExplorerExportView.as_view(),

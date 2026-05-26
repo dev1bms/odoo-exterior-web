@@ -47,7 +47,6 @@
     </ol>
   </nav>
 
-  {# ---------- Header ---------- #}
   <div class="app-card p-4 p-md-4 mb-4 fade-up">
     <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
       <div class="d-flex align-items-start gap-3">
@@ -75,7 +74,6 @@
     </div>
   </div>
 
-  {# ---------- Toolbar ---------- #}
   <div class="explorer-toolbar mb-3">
     <div class="row g-2 align-items-center">
       <div class="col-12 col-md">
@@ -92,17 +90,25 @@
       </div>
       <div class="col-12 col-md-auto">
         <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-outline-secondary btn-sm"
+             href="{% url 'audits:view_category_json' audit.pk category %}">
+            <i class="bi bi-eye me-1"></i>View JSON
+          </a>
           <a class="btn btn-outline-primary btn-sm"
              href="{% url 'audits:export_category' audit.pk category 'json' %}">
-            <i class="bi bi-filetype-json me-1"></i>JSON
+            <i class="bi bi-download me-1"></i>JSON
           </a>
           <a class="btn btn-outline-primary btn-sm"
              href="{% url 'audits:export_category' audit.pk category 'csv' %}">
             <i class="bi bi-filetype-csv me-1"></i>CSV
           </a>
+          <a class="btn btn-outline-secondary btn-sm"
+             href="{% url 'audits:view_category_markdown' audit.pk category %}">
+            <i class="bi bi-eye me-1"></i>View Markdown
+          </a>
           <a class="btn btn-outline-primary btn-sm"
              href="{% url 'audits:export_category' audit.pk category 'md' %}">
-            <i class="bi bi-filetype-md me-1"></i>Markdown
+            <i class="bi bi-download me-1"></i>Markdown
           </a>
         </div>
       </div>
@@ -113,7 +119,6 @@
     </div>
   </div>
 
-  {# ---------- Table / empty state ---------- #}
   {% if records %}
     <div class="app-card overflow-hidden fade-up">
       <div class="table-responsive">

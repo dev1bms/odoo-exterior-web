@@ -12,6 +12,7 @@ from .views import (
     SavedQueryListView,
     SavedQueryRunView,
     SavedQueryUpdateView,
+    SavedQueryViewJsonView,
 )
 
 
@@ -22,5 +23,6 @@ urlpatterns = [
     path("<int:pk>/edit/", SavedQueryUpdateView.as_view(), name="update"),
     path("<int:pk>/delete/", SavedQueryDeleteView.as_view(), name="delete"),
     path("<int:pk>/run/", SavedQueryRunView.as_view(), name="run"),
+    path("<int:pk>/view/json/", SavedQueryViewJsonView.as_view(), name="view_json"),
     path("<int:pk>/export/<str:format>/", SavedQueryExportView.as_view(), name="export"),
 ]

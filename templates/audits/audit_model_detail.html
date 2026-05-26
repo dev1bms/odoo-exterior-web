@@ -100,13 +100,21 @@
            href="{% url 'audits:model_data_explorer' audit.pk model_name %}">
           <i class="bi bi-table me-1"></i>Explore Data
         </a>
+        <a class="btn btn-outline-secondary"
+           href="{% url 'audits:view_model_json' audit.pk model_name %}">
+          <i class="bi bi-eye me-1"></i>View JSON
+        </a>
         <a class="btn btn-outline-primary"
            href="{% url 'audits:export_model_detail' audit.pk model_name 'json' %}">
-          <i class="bi bi-filetype-json me-1"></i>JSON
+          <i class="bi bi-download me-1"></i>JSON
+        </a>
+        <a class="btn btn-outline-secondary"
+           href="{% url 'audits:view_model_markdown' audit.pk model_name %}">
+          <i class="bi bi-eye me-1"></i>View Markdown
         </a>
         <a class="btn btn-outline-primary"
            href="{% url 'audits:export_model_detail' audit.pk model_name 'md' %}">
-          <i class="bi bi-filetype-md me-1"></i>Markdown
+          <i class="bi bi-download me-1"></i>Markdown
         </a>
       </div>
     </div>
@@ -293,7 +301,6 @@
     {% endif %}
   {% endfor %}
 
-  {# ---------- Raw payload (collapsible) ---------- #}
   <h2 class="h5 mb-3 mt-5 section-anchor" id="section-raw">
     <i class="bi bi-braces me-2 text-muted"></i>Raw payload
   </h2>

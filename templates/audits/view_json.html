@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} · Odoo Exterior{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+  {% include "audits/_partials/json_viewer.html" %}
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+  {% include "audits/_partials/copy_viewer_script.html" %}
+{% endblock %}

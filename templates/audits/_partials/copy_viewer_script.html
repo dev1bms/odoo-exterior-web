@@ -1,0 +1,70 @@
+<script>
+(function () {
+  document.querySelectorAll(".btn-copy-viewer").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var targetId = btn.getAttribute("data-copy-target");
+      var feedbackId = btn.getAttribute("data-copy-feedback");
+      var el = document.getElementById(targetId);
+      if (!el) return;
+      var text = el.textContent || "";
+      var done = function () {
+        var fb = feedbackId ? document.getElementById(feedbackId) : null;
+        if (fb) {
+          fb.classList.remove("d-none");
+          window.setTimeout(function () { fb.classList.add("d-none"); }, 1500);
+        }
+        var icon = btn.querySelector("i");
+        var label = btn.childNodes[btn.childNodes.length - 1];
+        var prev = label && label.textContent ? label.textContent.trim() : "";
+        if (label && label.nodeType === 3) {
+          label.textContent = " Copied";
+        } else if (btn.lastChild && btn.lastChild.nodeType === 3) {
+          btn.lastChild.textContent = " Copied";
+        }
+        window.setTimeout(function () {
+          if (btn.lastChild && btn.lastChild.nodeType === 3 && prev) {
+            btn.lastChild.textContent = " " + prev.replace(/^Copy\s*/, "Copy ");
+          }
+        }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          fallbackCopy(text);
+          done();
+        });
+      } else {
+        fallbackCopy(text);
+        done();
+      }
+    });
+  });
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  var search = document.getElementById("viewer-json-search");
+  var pre = document.getElementById("viewer-content");
+  if (search && pre && pre.classList.contains("viewer-json")) {
+    var lines = (pre.textContent || "").split("\n");
+    search.addEventListener("input", function () {
+      var q = search.value.trim().toLowerCase();
+      if (!q) {
+        pre.textContent = lines.join("\n");
+        return;
+      }
+      pre.textContent = lines.filter(function (line) {
+        return line.toLowerCase().indexOf(q) !== -1;
+      }).join("\n");
+    });
+  }
+})();
+</script>
