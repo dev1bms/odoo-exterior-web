@@ -7,10 +7,12 @@ from django.urls import path
 from .views import (
     AuditDetailView,
     AuditExplorerView,
+    AuditModelDataView,
     AuditModelDetailView,
     DownloadJsonView,
     DownloadMarkdownView,
     ExportCategoryView,
+    ExportModelDataView,
     ExportModelDetailView,
     RunAuditView,
 )
@@ -30,6 +32,19 @@ urlpatterns = [
         "<int:pk>/export/<str:category>/<str:format>/",
         ExportCategoryView.as_view(),
         name="export_category",
+    ),
+    # Model Data Explorer (live Odoo records, read-only). Registered
+    # before the model-detail patterns so the greedy ``<path:model_name>``
+    # of those routes cannot swallow the trailing ``/data/...`` segment.
+    path(
+        "<int:pk>/models/<path:model_name>/data/export/<str:format>/",
+        ExportModelDataView.as_view(),
+        name="export_model_data",
+    ),
+    path(
+        "<int:pk>/models/<path:model_name>/data/",
+        AuditModelDataView.as_view(),
+        name="model_data_explorer",
     ),
     # Model drill-down. The export pattern must be registered BEFORE the
     # detail pattern because ``<path:model_name>`` is greedy and would

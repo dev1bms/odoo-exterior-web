@@ -97,6 +97,10 @@
            href="{% url 'audits:explorer' audit.pk 'models' %}">
           <i class="bi bi-arrow-left me-1"></i>Back to Models
         </a>
+        <a class="btn btn-primary"
+           href="{% url 'audits:model_data_explorer' audit.pk model_name %}">
+          <i class="bi bi-table me-1"></i>Explore Data
+        </a>
         <a class="btn btn-outline-primary"
            href="{% url 'audits:export_model_detail' audit.pk model_name 'json' %}">
           <i class="bi bi-filetype-json me-1"></i>JSON

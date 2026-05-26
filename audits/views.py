@@ -13,7 +13,7 @@ from django.views.generic import DetailView
 
 from instances.models import OdooInstance
 
-from . import explorer
+from . import data_services, explorer
 from .models import AuditRun
 
 
@@ -175,6 +175,140 @@ def _attachment(body: str, content_type: str, filename: str) -> HttpResponse:
     response = HttpResponse(body, content_type=f"{content_type}; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+# --------------------------------------------------------------------- #
+# Model Data Explorer — live Odoo records browsing & export
+# --------------------------------------------------------------------- #
+
+class _ModelDataMixin(_OwnedAuditMixin):
+    """Shared validation for the Data Explorer page + its export endpoint.
+
+    Loads the audit (with ownership scoping), confirms the requested model
+    exists in the audit's JSON, parses + clamps every query parameter, and
+    returns the materialized :class:`data_services.FetchResult`.
+    """
+
+    def _load(self, request, pk: int, model_name: str):
+        audit = get_object_or_404(self.get_queryset(), pk=pk)
+        # The model must exist in the audit JSON. Never trust the URL.
+        payload = explorer.build_model_detail_payload(audit, model_name)
+        if payload is None:
+            raise Http404(f"Model {model_name!r} not in audit.")
+
+        available = data_services.get_model_available_fields(audit, model_name)
+        defaults = data_services.get_default_data_fields(audit, model_name)
+
+        # Query params (defensive at every step)
+        raw_fields = request.GET.get("fields", "")
+        requested_fields = [f.strip() for f in raw_fields.split(",") if f.strip()]
+        fields_used = data_services.sanitize_field_selection(
+            requested_fields, available, defaults=defaults
+        )
+        limit = data_services.clamp_limit(request.GET.get("limit"))
+        offset = data_services.clamp_offset(request.GET.get("offset"))
+        search_field = data_services.sanitize_search_field(
+            request.GET.get("search_field", ""), available
+        )
+        query = (request.GET.get("q") or "").strip()
+
+        result = data_services.fetch_model_records(
+            audit,
+            model_name,
+            fields=fields_used,
+            limit=limit,
+            offset=offset,
+            search_field=search_field,
+            query=query,
+        )
+        return {
+            "audit": audit,
+            "model_name": model_name,
+            "model_record": payload["model_record"],
+            "available_fields": available,
+            "fields_used": result.fields_used,
+            "limit": limit,
+            "offset": offset,
+            "search_field": search_field,
+            "query": query,
+            "result": result,
+        }
+
+
+class AuditModelDataView(_ModelDataMixin, View):
+    """Browse live Odoo records for one model (read-only, paginated)."""
+
+    template_name = "audits/audit_model_data.html"
+
+    def get(self, request, pk: int, model_name: str):
+        ctx = self._load(request, pk, model_name)
+        # Pre-render every cell so the template stays lean.
+        ctx["rows"] = data_services.build_data_rows(
+            ctx["result"].records,
+            ctx["fields_used"],
+            ctx["available_fields"],
+        )
+        ctx["allowed_limits"] = data_services.ALLOWED_LIMITS
+        ctx["data_export_formats"] = data_services.DATA_EXPORT_FORMATS
+        # For the "preserve filters" links in pagination + export.
+        ctx["query_string"] = self._build_query_string(ctx)
+        # Convenience: showing X–Y of N
+        ctx["showing_from"] = (ctx["offset"] + 1) if ctx["result"].records else 0
+        ctx["showing_to"] = ctx["offset"] + len(ctx["result"].records)
+        ctx["next_offset"] = ctx["offset"] + ctx["limit"]
+        ctx["prev_offset"] = max(0, ctx["offset"] - ctx["limit"])
+        from django.template.response import TemplateResponse
+        return TemplateResponse(request, self.template_name, ctx)
+
+    @staticmethod
+    def _build_query_string(ctx: dict) -> str:
+        """Build a URL-encoded query string of the current filters."""
+        from urllib.parse import urlencode
+        params: list[tuple[str, str]] = []
+        if ctx["fields_used"]:
+            params.append(("fields", ",".join(ctx["fields_used"])))
+        params.append(("limit", str(ctx["limit"])))
+        if ctx["search_field"]:
+            params.append(("search_field", ctx["search_field"]))
+        if ctx["query"]:
+            params.append(("q", ctx["query"]))
+        return urlencode(params)
+
+
+class ExportModelDataView(_ModelDataMixin, View):
+    """Export the *currently filtered* Data Explorer result as JSON or CSV."""
+
+    def get(self, request, pk: int, model_name: str, format: str):
+        if format not in data_services.DATA_EXPORT_FORMATS:
+            raise Http404(f"Unsupported export format: {format!r}")
+
+        ctx = self._load(request, pk, model_name)
+        result = ctx["result"]
+        # If the live fetch errored, surface it as a 502-ish plain text body
+        # rather than serving an empty/garbled file.
+        if not result.ok:
+            response = HttpResponse(
+                f"Could not fetch data: {result.error}\n",
+                content_type="text/plain; charset=utf-8",
+                status=502,
+            )
+            return response
+
+        safe_name = explorer.safe_model_filename(model_name)
+        stem = f"audit_{ctx['audit'].pk}_model_{safe_name}_data"
+
+        if format == "json":
+            return _attachment(
+                data_services.records_to_json(result.records),
+                "application/json",
+                f"{stem}.json",
+            )
+        # csv
+        return _attachment(
+            data_services.records_to_csv(result.records, ctx["fields_used"]),
+            "text/csv",
+            f"{stem}.csv",
+        )
 
 
 class RunAuditView(LoginRequiredMixin, View):
