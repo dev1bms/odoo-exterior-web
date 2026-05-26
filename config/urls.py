@@ -17,4 +17,8 @@ urlpatterns = [
         "data-explorer/",
         include(("data_explorer.urls", "data_explorer"), namespace="data_explorer"),
     ),
+    path(
+        "saved-queries/",
+        include(("saved_queries.urls", "saved_queries"), namespace="saved_queries"),
+    ),
 ]

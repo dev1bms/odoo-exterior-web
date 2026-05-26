@@ -41,7 +41,7 @@
 {% block content %}
 <section class="container py-4 py-lg-5">
 
-  {# ---------- Breadcrumb ---------- #}
+
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb small">
       <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
@@ -60,7 +60,6 @@
     </ol>
   </nav>
 
-  {# ---------- Header card ---------- #}
   <div class="app-card p-4 p-md-4 mb-4 fade-up">
     <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
       <div class="d-flex align-items-start gap-3">
@@ -113,7 +112,6 @@
     </div>
   </div>
 
-  {# ---------- Summary metric strip ---------- #}
   <div class="row g-3 mb-4">
     {% for card in metric_cards %}
       <div class="col-6 col-md-4 col-lg-3 col-xl">
@@ -130,7 +128,6 @@
     {% endfor %}
   </div>
 
-  {# ---------- Overview ---------- #}
   <h2 class="h5 mb-3 mt-4 section-anchor" id="section-overview">
     <i class="bi bi-info-circle me-2 text-muted"></i>Overview
   </h2>
@@ -176,11 +173,9 @@
     </dl>
   </div>
 
-  {# ------------------------------------------------------------- #
      Per-section tables. The first table (Fields) gets a search input;
      the rest expose data-search attributes so the same JS helper can
      be enabled by adding a search input above them if needed.
-     ------------------------------------------------------------- #}
 
   {% for section in sections %}
     {% if section.slug == 'relationships' %}

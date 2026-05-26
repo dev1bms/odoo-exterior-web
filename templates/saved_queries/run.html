@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Run {{ saved_query.name }} · Odoo Exterior{% endblock %}
+
+{% block extra_head %}
+<style>
+  .data-table { font-size: 0.88rem; }
+  .data-table td, .data-table th { vertical-align: top; }
+  .data-table td.cell-empty { color: var(--color-subtle, #94a3b8); }
+  .data-table td.cell-code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .data-table td.cell-truncate { max-width: 24rem; }
+  .data-table td.cell-truncate .cell-inner { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+  .data-table td.cell-preview { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; max-width: 28rem; }
+  .pill { display:inline-block; padding:0.15rem 0.55rem; border-radius:999px; font-size:0.74rem; font-weight:600; background:#e2e8f0; color:#475569; }
+  .pill-bool-true { background:#dcfce7; color:#15803d; }
+  .pill-bool-false { background:#f1f5f9; color:#64748b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'saved_queries:list' %}">Saved Queries</a></li>
+      <li class="breadcrumb-item"><a href="{{ saved_query.get_absolute_url }}">{{ saved_query.name }}</a></li>
+      <li class="breadcrumb-item active">Run</li>
+    </ol>
+  </nav>
+
+  <div class="app-card p-4 mb-4 fade-up">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+      <div>
+        <span class="section-kicker">Saved query result</span>
+        <h1 class="h4 fw-bold mt-2 mb-1">{{ saved_query.name }}</h1>
+        <div class="small text-muted">{{ instance.name }} · <code>{{ model_name }}</code> · limit {{ limit }}</div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" href="{{ saved_query.get_absolute_url }}"><i class="bi bi-arrow-left me-1"></i>Details</a>
+        <a class="btn btn-outline-primary" href="{% url 'saved_queries:export' saved_query.pk 'json' %}">JSON</a>
+        <a class="btn btn-outline-primary" href="{% url 'saved_queries:export' saved_query.pk 'csv' %}">CSV</a>
+      </div>
+    </div>
+  </div>
+
+  {% if audit %}
+    <div class="callout callout--info mb-4 fade-up"><i class="bi bi-info-circle"></i><div>Read-only live fetch using audit <a href="{{ audit.get_absolute_url }}">#{{ audit.id }}</a> as the model and field catalog.</div></div>
+  {% endif %}
+
+  {% if not result.ok %}
+    <div class="callout callout--danger fade-up"><i class="bi bi-x-octagon"></i><div><strong>Could not load data.</strong><div class="small mt-1">{{ result.error }}</div></div></div>
+  {% elif result.records %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 small text-muted">
+      <div>Showing <strong>{{ showing_from }}</strong>–<strong>{{ showing_to }}</strong> of <strong>{{ result.total }}</strong></div>
+      <div><span class="pill"><i class="bi bi-database me-1"></i>{{ fields_used|length }} field{{ fields_used|length|pluralize }}</span></div>
+    </div>
+    <div class="app-card overflow-hidden fade-up">
+      <div class="table-responsive">
+        <table class="table table-hover data-table mb-0">
+          <thead class="table-light"><tr>{% for name in fields_used %}<th><code>{{ name }}</code></th>{% endfor %}</tr></thead>
+          <tbody>
+            {% for row in rows %}<tr>{% for cell in row %}{% include "audits/_partials/_model_cell.html" with cell=cell %}{% endfor %}</tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state fade-up"><span class="empty-icon"><i class="bi bi-search"></i></span><h3 class="h6 mb-1">No records found</h3><p class="text-muted small mb-0">This saved query returned no readable records.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

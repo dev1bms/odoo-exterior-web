@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "instances",
     "audits",
     "data_explorer",
+    "saved_queries",
 ]
 
 MIDDLEWARE = [

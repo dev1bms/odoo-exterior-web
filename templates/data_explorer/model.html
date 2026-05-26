@@ -82,6 +82,10 @@
            href="{% url 'data_explorer:instance' instance.pk %}">
           <i class="bi bi-arrow-left me-1"></i>Back to models
         </a>
+        <a class="btn btn-outline-secondary"
+           href="{% url 'saved_queries:create' %}?instance={{ instance.pk }}&model_name={{ model_name|urlencode }}{% if query_string %}&{{ query_string }}{% endif %}">
+          <i class="bi bi-bookmark-plus me-1"></i>Save this query
+        </a>
         <a class="btn btn-outline-primary"
            href="{% url 'data_explorer:export' instance.pk model_name 'json' %}?{{ query_string }}">
           <i class="bi bi-filetype-json me-1"></i>JSON

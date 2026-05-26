@@ -2,10 +2,11 @@
 
 A small SaaS web app on top of [`odoo-studio-extractor`](../odoo-studio-extractor).
 
-Users sign up, register one or more Odoo instances, **test the connection
-read-only**, **run a Studio audit**, and then **view / download** the
-generated Markdown and JSON reports — all from a browser, without installing
-anything inside Odoo.
+Users sign up, register one or more Odoo instances, and use a read-only
+**Odoo toolbox**: **Studio Audit** (reverse-engineer Studio customizations),
+**Data Explorer** (browse live records and export CSV/JSON), and **Saved
+Queries** (reusable export configurations) — all from a browser, without
+installing anything inside Odoo.
 
 This repository is the **MVP**. It is deliberately small:
 
@@ -27,7 +28,12 @@ This repository is the **MVP**. It is deliberately small:
   fallback for local dev).
 - **`audits/`** — `AuditRun` model, a `services.py` layer that wraps the
   `odoo-studio-extractor` engine, and views to display + download the
-  generated reports.
+  generated reports. `data_services.py` provides read-only live Odoo fetches
+  for Data Explorer and Saved Queries.
+- **`data_explorer/`** — browse live Odoo records using the latest completed
+  audit as a field catalog; CSV/JSON export.
+- **`saved_queries/`** — reusable Data Explorer configurations (settings
+  only — no exported data or credentials).
 - **Service layer** (`audits/services.py`) is the integration point with
   the extractor package. Replace its body with a Celery task later without
   touching the views.

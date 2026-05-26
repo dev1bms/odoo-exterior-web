@@ -32,15 +32,26 @@ class DashboardView(OwnerQuerysetMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         # Avoid a hard import cycle: import here.
         from audits.models import AuditRun
+        from saved_queries.models import SavedQuery
 
         user = self.request.user
         user_audits = AuditRun.objects.filter(instance__user=user)
+        user_saved_queries = SavedQuery.objects.filter(user=user).select_related("instance")
 
         ctx["recent_audits"] = (
             user_audits
             .select_related("instance")
             .order_by("-created_at")[:10]
         )
+        ctx["latest_completed_audit"] = (
+            user_audits
+            .filter(status=AuditRun.Status.COMPLETED)
+            .select_related("instance")
+            .order_by("-created_at")
+            .first()
+        )
+        ctx["latest_saved_query"] = user_saved_queries.order_by("-updated_at").first()
+        ctx["recent_instance"] = ctx["instances"].order_by("-updated_at").first()
         ctx["stats"] = {
             "instance_count": ctx["instances"].count(),
             "completed_count": user_audits.filter(
@@ -50,6 +61,7 @@ class DashboardView(OwnerQuerysetMixin, ListView):
                 status=AuditRun.Status.FAILED
             ).count(),
             "latest_audit": user_audits.order_by("-created_at").first(),
+            "saved_query_count": user_saved_queries.count(),
         }
         return ctx
 

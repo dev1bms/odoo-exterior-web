@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ saved_query.name }} · Saved Query · Odoo Exterior{% endblock %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'instances:dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'saved_queries:list' %}">Saved Queries</a></li>
+      <li class="breadcrumb-item active">{{ saved_query.name }}</li>
+    </ol>
+  </nav>
+
+  <div class="app-card p-4 mb-4 fade-up">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+      <div class="d-flex align-items-start gap-3">
+        <span class="feature-icon mb-0" style="margin-bottom:0;"><i class="bi bi-bookmark-star"></i></span>
+        <div>
+          <h1 class="h4 fw-bold mb-1">{{ saved_query.name }}</h1>
+          <div class="small text-muted">
+            <span>{{ saved_query.instance.name }}</span><span class="mx-1">·</span><code>{{ saved_query.model_name }}</code><span class="mx-1">·</span>{{ saved_query.field_count }} field{{ saved_query.field_count|pluralize }}<span class="mx-1">·</span>limit {{ saved_query.limit }}
+          </div>
+          {% if saved_query.description %}<p class="text-muted mt-2 mb-0">{{ saved_query.description }}</p>{% endif %}
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="{% url 'saved_queries:run' saved_query.pk %}"><i class="bi bi-play-fill me-1"></i>Run</a>
+        <a class="btn btn-outline-primary" href="{% url 'saved_queries:export' saved_query.pk 'csv' %}">CSV</a>
+        <a class="btn btn-outline-primary" href="{% url 'saved_queries:export' saved_query.pk 'json' %}">JSON</a>
+        <a class="btn btn-outline-secondary" href="{% url 'saved_queries:update' saved_query.pk %}">Edit</a>
+      </div>
+    </div>
+  </div>
+
+  {% if latest_audit and model_exists %}
+    <div class="callout callout--info fade-up mb-4"><i class="bi bi-info-circle"></i><div>Catalog from audit <a href="{{ latest_audit.get_absolute_url }}">#{{ latest_audit.id }}</a> generated {{ latest_audit.created_at|date:"M j, Y H:i" }}.</div></div>
+  {% elif latest_audit %}
+    <div class="callout callout--warning fade-up mb-4"><i class="bi bi-exclamation-triangle"></i><div>The latest completed audit does not contain <code>{{ saved_query.model_name }}</code>. Run a fresh audit or edit this saved query.</div></div>
+  {% else %}
+    <div class="callout callout--warning fade-up mb-4"><i class="bi bi-exclamation-triangle"></i><div>No completed audit exists for this instance. Run a Studio Audit before running this saved query.</div></div>
+  {% endif %}
+
+  <div class="app-card p-4 fade-up">
+    <h2 class="h6 fw-bold mb-3">Configuration</h2>
+    <dl class="row small mb-0">
+      <dt class="col-sm-3">Instance</dt><dd class="col-sm-9">{{ saved_query.instance.name }}</dd>
+      <dt class="col-sm-3">Model</dt><dd class="col-sm-9"><code>{{ saved_query.model_name }}</code></dd>
+      <dt class="col-sm-3">Fields</dt><dd class="col-sm-9">{% for f in saved_query.selected_fields %}<code class="me-1">{{ f }}</code>{% empty %}<span class="text-muted">defaults from audit catalog</span>{% endfor %}</dd>
+      <dt class="col-sm-3">Search</dt><dd class="col-sm-9">{{ saved_query.search_summary }}</dd>
+      <dt class="col-sm-3">Last run</dt><dd class="col-sm-9">{{ saved_query.last_run_at|date:"M j, Y H:i"|default:"Never" }}</dd>
+    </dl>
+  </div>
+</section>
+{% endblock %}
